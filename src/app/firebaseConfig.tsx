@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp, getApps } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check"; // Updated import
@@ -49,9 +48,9 @@ try {
     const recaptchaEnterpriseSiteKey = process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
 
-    if (app && recaptchaEnterpriseSiteKey) {
+    if (app && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') { // Added trim check
         console.log("Attempting to initialize Firebase App Check with ReCaptcha Enterprise...");
-        console.log(`Using ReCAPTCHA Enterprise Site Key: ${recaptchaEnterpriseSiteKey ? 'Provided' : 'MISSING'}`);
+        console.log(`Using ReCAPTCHA Enterprise Site Key: Provided`);
 
         // Set debug token if running locally and token is provided
         // IMPORTANT: Ensure the debug token is correctly generated and not expired.
@@ -117,10 +116,10 @@ try {
     } else if (!app) {
         console.error("Firebase App Check initialization skipped: Firebase app instance is not available.");
         appCheckInitialized = false;
-    } else if (!recaptchaEnterpriseSiteKey) {
+    } else if (!recaptchaEnterpriseSiteKey || recaptchaEnterpriseSiteKey.trim() === '') { // Updated condition
         console.warn(
          "Firebase App Check initialization skipped: " +
-         "NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY environment variable is missing. " +
+         "NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY environment variable is missing or empty. " + // Added "or empty"
          "App Check protects your backend resources from abuse. " +
          "It's strongly recommended to configure it with a ReCaptcha Enterprise site key for production."
        );
