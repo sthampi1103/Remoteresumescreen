@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useRouter} from 'next/navigation';
@@ -15,7 +16,7 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'; /
 import {Icons} from '@/components/icons';
 import {useToast} from '@/hooks/use-toast';
 import { Toaster } from "@/components/ui/toaster";
-import { appInitialized, app } from './firebaseConfig';
+import { appInitialized, app, appCheckInitialized } from './firebaseConfig'; // Import appCheckInitialized
 import { getAuth, signOut } from 'firebase/auth'; // Import signOut
 import { rankResumes, RankResumesOutput } from '@/ai/flows/rank-resumes';
 import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions'; // Import updated flow
@@ -68,18 +69,30 @@ export default function Home() {
        // router.push('/auth'); // Consider uncommenting
        return;
      }
+    
+    if (!appCheckInitialized) {
+      toast({
+        title: "App Check Security Alert",
+        description: "App Check failed to initialize. Key functionalities may be impaired or disabled. Please check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues) and verify your Firebase/Google Cloud App Check configuration.",
+        variant: "destructive",
+        duration: Infinity, // Make it sticky until dismissed or page reloads
+      });
+      // Disable buttons or show a more prominent page-level warning if needed
+      // For now, buttons will be disabled via their own `disabled` prop checking appCheckInitialized
+    }
+
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (!user) {
          router.push('/auth');
       }
     });
     return () => unsubscribe();
-  }, [router, appInitialized, auth]); // Add dependencies
+  }, [router, appInitialized, auth, appCheckInitialized, toast]); // Add dependencies
 
 
   // Check if inputs are valid whenever jobDescription or resumesText changes
   useEffect(() => {
-    const shouldStartBeActive = isJDValid && areResumesValid && !isResultsDisplayed;
+    const shouldStartBeActive = isJDValid && areResumesValid && !isResultsDisplayed && appCheckInitialized; // Add appCheckInitialized
     setIsStartActive(shouldStartBeActive);
 
     const shouldResetBeActive =
@@ -89,7 +102,7 @@ export default function Home() {
       interviewQnA.length > 0 || // Consider Q&A for reset
       isResultsDisplayed || showInterviewQnA; // Consider if Q&A are shown
     setIsResetActive(shouldResetBeActive);
-  }, [jobDescription, resumesText, results, interviewQnA, isJDValid, areResumesValid, isResultsDisplayed, showInterviewQnA]);
+  }, [jobDescription, resumesText, results, interviewQnA, isJDValid, areResumesValid, isResultsDisplayed, showInterviewQnA, appCheckInitialized]); // Add appCheckInitialized
 
   const handleJDChange = (jd: string, isValid: boolean) => {
     setJobDescription(jd);
@@ -102,6 +115,14 @@ export default function Home() {
   };
 
   const handleStart = async () => {
+    if (!appCheckInitialized) {
+      toast({
+        title: "App Check Error",
+        description: "Cannot start analysis: App Check is not initialized. Please resolve configuration issues (see console).",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!isJDValid || !areResumesValid) {
       toast({
         title: "Input Incomplete",
@@ -120,6 +141,14 @@ export default function Home() {
   };
 
    const handleGenerateQnA = async () => { // Renamed handler
+      if (!appCheckInitialized) {
+        toast({
+          title: "App Check Error",
+          description: "Cannot generate Q&A: App Check is not initialized. Please resolve configuration issues (see console).",
+          variant: "destructive",
+        });
+        return;
+      }
       if (!isJDValid) {
           toast({
               title: "Job Description Missing",
@@ -347,6 +376,11 @@ export default function Home() {
       if (!isResultsDisplayed || !jobDescription || !resumesText) {
         return;
       }
+      if (!appCheckInitialized) { // Double check App Check before expensive AI call
+        setError("App Check not initialized. Cannot perform AI operations.");
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       setError(null);
@@ -365,7 +399,11 @@ export default function Home() {
         setError(null);
       } catch (err: any) {
         console.error("Error ranking resumes:", err);
-        setError(err.message || "An error occurred while analyzing resumes.");
+        if (err.message && (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error'))) {
+           setError("Failed to analyze resumes due to an App Check security error. Please check console for details and verify your Firebase/Google Cloud setup.");
+        } else {
+           setError(err.message || "An error occurred while analyzing resumes.");
+        }
         setResults([]);
       } finally {
         setLoading(false);
@@ -374,7 +412,7 @@ export default function Home() {
 
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isResultsDisplayed]); // Only trigger when isResultsDisplayed changes
+  }, [isResultsDisplayed, appCheckInitialized]); // Added appCheckInitialized, jobDescription, resumesText were already implicitly part of this via isResultsDisplayed guard
 
 
   return (
@@ -454,7 +492,7 @@ export default function Home() {
              {/* Generate Q&A Button */}
              <Button
                 onClick={handleGenerateQnA} // Use new handler
-                disabled={!isJDValid || isGeneratingQnA} // Use new loading state
+                disabled={!isJDValid || isGeneratingQnA || !appCheckInitialized} // Use new loading state, add appCheckInitialized
                 aria-label="Generate interview Q&A"
                 className="mt-4"
                 suppressHydrationWarning={true}
@@ -488,7 +526,7 @@ export default function Home() {
         <div className="flex justify-center mt-6 gap-4">
           <Button
             onClick={handleStart}
-            disabled={!isStartActive || loading} // Also disable while loading results
+            disabled={!isStartActive || loading || !appCheckInitialized} // Also disable while loading results or if AppCheck failed
             aria-label="Start analysis"
             suppressHydrationWarning={true}
           >

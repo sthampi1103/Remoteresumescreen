@@ -63,6 +63,22 @@ const AuthPage = ({}: AuthPageProps) => {
 
   const router = useRouter();
 
+  useEffect(() => {
+    // This effect sets an initial error if App Check failed during startup.
+    // It runs when appInitialized or appCheckInitialized status changes, or if an error is already set (to avoid overwriting).
+    if (appInitialized && !appCheckInitialized && !error) {
+      setError(
+        "App Check Security Alert: Initialization failed. Functionality will be limited. " +
+        "Check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues). " +
+        "Verify your reCAPTCHA Enterprise setup in Google Cloud & Firebase project settings."
+      );
+    }
+    // Note: We don't clear the error here if appCheckInitialized becomes true later,
+    // as other unrelated errors might have been set by user actions.
+    // Specific actions should clear their own errors upon success.
+  }, [appInitialized, appCheckInitialized, error]);
+
+
    // Initialize reCAPTCHA only once when the component mounts
    useEffect(() => {
      if (!appInitialized || !auth || !recaptchaContainerRef.current) {
@@ -168,8 +184,9 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Authentication might fail if App Check is enforced.");
-       // Consider showing a milder warning or proceeding cautiously
-       setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors.");
+       // The useEffect above should have already set a more general App Check error.
+       // This provides a more immediate feedback if user tries to submit.
+       setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors and verify your Firebase/Google Cloud App Check configuration.");
        setLoading(false);
        setLoadingMessage(null);
        return;
@@ -223,9 +240,9 @@ const AuthPage = ({}: AuthPageProps) => {
                 console.error(`App Check/reCAPTCHA Error during login (${err.code}):`, err.message);
                 let userFriendlyMessage = `Authentication failed due to a security check (${err.code}). `;
                 if (err.code.includes('recaptcha-error')) {
-                    userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain not authorized in Google Cloud, API not enabled) or network connection. Please try again or contact support.";
+                    userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain not authorized in Google Cloud, API not enabled) or network connection. Please try again or contact support. Check console for more Firebase hints.";
                 } else if (err.code.includes('app-check') || err.code.includes('token-is-invalid')) {
-                    userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token if local) and your environment is supported. Refreshing the page might help. Contact support if the issue persists.";
+                    userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token if local) and your environment is supported. Refreshing the page might help. Contact support if the issue persists. Check console for more Firebase hints.";
                 } else if (err.code.includes('app-not-authorized')) {
                     userFriendlyMessage += "This app is not authorized to use Firebase Authentication. Check your Firebase project setup and authorized domains.";
                 }
@@ -266,7 +283,7 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Sign-up might fail if App Check is enforced.");
-        setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors.");
+        setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors and verify your Firebase/Google Cloud App Check configuration.");
         setLoading(false);
         setLoadingMessage(null);
         return;
@@ -298,9 +315,9 @@ const AuthPage = ({}: AuthPageProps) => {
                  console.error(`App Check/reCAPTCHA Error during sign up (${err.code}):`, err.message);
                  let userFriendlyMessage = `Sign up failed due to a security check (${err.code}). `;
                  if (err.code.includes('recaptcha-error')) {
-                    userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain not authorized, API not enabled) or network connection. Please try again or contact support.";
+                    userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain not authorized, API not enabled) or network connection. Please try again or contact support. Check console for more Firebase hints.";
                  } else if (err.code.includes('app-check') || err.code.includes('token-is-invalid')) {
-                     userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token). Refreshing might help. Contact support if the issue persists.";
+                     userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token). Refreshing might help. Contact support if the issue persists. Check console for more Firebase hints.";
                  } else if (err.code.includes('app-not-authorized')) {
                      userFriendlyMessage += "This app is not authorized for sign-up. Check Firebase project setup.";
                  }
@@ -337,7 +354,7 @@ const AuthPage = ({}: AuthPageProps) => {
        // Check App Check initialization before proceeding with phone auth
        if (!appCheckInitialized) {
          console.warn("App Check not initialized. Sending MFA code might fail if App Check is enforced.");
-         setError("App Check is not ready. Please wait a moment and try again.");
+         setError("App Check is not ready. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration.");
          return; // Don't proceed without App Check
        }
 
@@ -373,9 +390,9 @@ const AuthPage = ({}: AuthPageProps) => {
                    console.error(`App Check/reCAPTCHA Error during MFA code sending (${err.code}):`, err.message);
                    let userFriendlyMessage = `Failed to send verification code due to a security check (${err.code}). `;
                      if (err.code.includes('recaptcha-error')) {
-                         userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, unauthorized domain, API not enabled) or network connection. Please contact support.";
+                         userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, unauthorized domain, API not enabled) or network connection. Please contact support. Check console for more Firebase hints.";
                      } else if (err.code.includes('app-check') || err.code.includes('token-is-invalid')) {
-                         userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token). Refreshing might help. Contact support.";
+                         userFriendlyMessage += "Ensure App Check is configured correctly (check Firebase Console, site key, debug token). Refreshing might help. Contact support. Check console for more Firebase hints.";
                      } else if (err.code.includes('app-not-authorized')) {
                          userFriendlyMessage += "This app is not authorized for this operation. Check Firebase project setup.";
                      }
@@ -425,7 +442,7 @@ const AuthPage = ({}: AuthPageProps) => {
       // Check App Check initialization before verifying MFA code
       if (!appCheckInitialized) {
         console.warn("App Check not initialized. Verifying MFA code might fail if App Check is enforced.");
-        setError("App Check is not ready. Please wait a moment and try again.");
+        setError("App Check is not ready. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration.");
         return; // Don't proceed without App Check
       }
 
@@ -466,9 +483,9 @@ const AuthPage = ({}: AuthPageProps) => {
                     console.error(`App Check/reCAPTCHA Error during MFA verification (${err.code}):`, err.message);
                     let userFriendlyMessage = `MFA verification failed due to a security check (${err.code}). `;
                       if (err.code.includes('recaptcha-error')) {
-                          userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain, API) or network connection. Contact support.";
+                          userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain, API) or network connection. Contact support. Check console for more Firebase hints.";
                       } else if (err.code.includes('app-check') || err.code.includes('token-is-invalid')) {
-                          userFriendlyMessage += "Ensure App Check is configured correctly (Firebase Console, site key, debug token). Refreshing might help. Contact support.";
+                          userFriendlyMessage += "Ensure App Check is configured correctly (Firebase Console, site key, debug token). Refreshing might help. Contact support. Check console for more Firebase hints.";
                       } else if (err.code.includes('app-not-authorized')) {
                           userFriendlyMessage += "This app is not authorized for this operation. Check Firebase project setup.";
                       }
@@ -510,7 +527,7 @@ const AuthPage = ({}: AuthPageProps) => {
      // Check App Check initialization specifically for security-sensitive operations
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Password reset might fail if App Check is enforced.");
-       setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors.");
+       setError("App Check is not ready. Please wait a moment and try again. If the problem persists, check the console for errors and verify your Firebase/Google Cloud App Check configuration.");
        setLoading(false);
        setLoadingMessage(null);
        return;
@@ -540,9 +557,9 @@ const AuthPage = ({}: AuthPageProps) => {
                console.error(`App Check/reCAPTCHA Error during password reset (${err.code}):`, err.message);
                 let userFriendlyMessage = `Password reset failed due to a security check (${err.code}). `;
                  if (err.code.includes('recaptcha-error')) {
-                     userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain, API) or network connection. Contact support.";
+                     userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (invalid key, domain, API) or network connection. Contact support. Check console for more Firebase hints.";
                  } else if (err.code.includes('app-check') || err.code.includes('token-is-invalid')) {
-                     userFriendlyMessage += "Ensure App Check is configured correctly (Firebase Console, site key, debug token). Refreshing might help. Contact support.";
+                     userFriendlyMessage += "Ensure App Check is configured correctly (Firebase Console, site key, debug token). Refreshing might help. Contact support. Check console for more Firebase hints.";
                  } else if (err.code.includes('app-not-authorized')) {
                     userFriendlyMessage += "This app is not authorized for password reset. Check Firebase project setup.";
                  }
@@ -569,7 +586,7 @@ const AuthPage = ({}: AuthPageProps) => {
   const toggleAuthMode = () => {
     setIsSignUp(!isSignUp);
     setIsForgotPassword(false); // Ensure forgot password mode is off when toggling
-    setError(null);
+    setError(null); // Clear previous errors, new App Check error will be set by useEffect if needed
     setSuccessMessage(null);
     setEmail(''); // Clear fields on mode change
     setPassword('');
@@ -587,7 +604,7 @@ const AuthPage = ({}: AuthPageProps) => {
   const showForgotPassword = () => {
     setIsForgotPassword(true);
     setIsSignUp(false); // Ensure sign up mode is off
-    setError(null);
+    setError(null); // Clear previous errors
     setSuccessMessage(null);
     // Keep email if user already typed it, but clear password
     setPassword('');
@@ -605,7 +622,7 @@ const AuthPage = ({}: AuthPageProps) => {
   const showLogin = () => {
     setIsForgotPassword(false);
     setIsSignUp(false);
-    setError(null);
+    setError(null); // Clear previous errors
     setSuccessMessage(null);
     // Optionally clear fields, or keep email if coming from Forgot Password
     // setEmail('');
@@ -640,7 +657,7 @@ const AuthPage = ({}: AuthPageProps) => {
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Icons.alertCircle className="h-4 w-4" />
-            <AlertTitle>{isSignUp ? 'Sign Up Error' : isForgotPassword ? 'Reset Password Error' : isMFAPrompt ? 'MFA Error' : 'Login Error'}</AlertTitle>
+            <AlertTitle>{isSignUp ? 'Sign Up Error' : isForgotPassword ? 'Reset Password Error' : isMFAPrompt ? 'MFA Error' : error.includes("App Check") ? 'Security Initialization Error' : 'Login Error'}</AlertTitle>
             <AlertDescription suppressHydrationWarning={true}>{error}</AlertDescription>
           </Alert>
         )}
@@ -666,7 +683,7 @@ const AuthPage = ({}: AuthPageProps) => {
                 <Input
                   className="shadow-sm appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-ring"
                   id="email-login" type="email" placeholder="you@example.com" value={email}
-                  onChange={(e) => setEmail(e.target.value)} required disabled={loading} suppressHydrationWarning={true}
+                  onChange={(e) => setEmail(e.target.value)} required disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}
                 />
               </div>
               {/* Password Input */}
@@ -675,7 +692,7 @@ const AuthPage = ({}: AuthPageProps) => {
                 <Input
                   className="shadow-sm appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-ring"
                   id="password-login" type="password" placeholder="••••••••" value={password}
-                  onChange={(e) => setPassword(e.target.value)} required disabled={loading} suppressHydrationWarning={true}
+                  onChange={(e) => setPassword(e.target.value)} required disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}
                 />
               </div>
               {/* Login Button */}
@@ -687,12 +704,12 @@ const AuthPage = ({}: AuthPageProps) => {
               </div>
               {/* Links */}
               <div className="text-center space-y-2">
-                <Button type="button" variant="link" onClick={showForgotPassword} className="text-sm" disabled={loading} suppressHydrationWarning={true}>
+                <Button type="button" variant="link" onClick={showForgotPassword} className="text-sm" disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}>
                   Forgot Password?
                 </Button>
                  <p className="text-sm text-muted-foreground">
                    Don't have an account?{' '}
-                   <Button type="button" variant="link" onClick={toggleAuthMode} className="text-sm p-0 h-auto" disabled={loading} suppressHydrationWarning={true}>
+                   <Button type="button" variant="link" onClick={toggleAuthMode} className="text-sm p-0 h-auto" disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}>
                      Sign Up
                    </Button>
                  </p>
@@ -712,7 +729,7 @@ const AuthPage = ({}: AuthPageProps) => {
                   <Input
                     className="shadow-sm appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-ring"
                     id="email-signup" type="email" placeholder="you@example.com" value={email}
-                    onChange={(e) => setEmail(e.target.value)} required disabled={loading} suppressHydrationWarning={true}
+                    onChange={(e) => setEmail(e.target.value)} required disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}
                   />
               </div>
               {/* Password Input */}
@@ -721,7 +738,7 @@ const AuthPage = ({}: AuthPageProps) => {
                   <Input
                     className="shadow-sm appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-ring"
                     id="password-signup" type="password" placeholder="Choose a strong password" value={password}
-                    onChange={(e) => setPassword(e.target.value)} required disabled={loading} suppressHydrationWarning={true}
+                    onChange={(e) => setPassword(e.target.value)} required disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}
                   />
               </div>
               {/* Sign Up Button */}
@@ -735,7 +752,7 @@ const AuthPage = ({}: AuthPageProps) => {
               <div className="text-center">
                  <p className="text-sm text-muted-foreground">
                     Already have an account?{' '}
-                    <Button type="button" variant="link" onClick={showLogin} className="text-sm p-0 h-auto" disabled={loading} suppressHydrationWarning={true}>
+                    <Button type="button" variant="link" onClick={showLogin} className="text-sm p-0 h-auto" disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}>
                       Login
                     </Button>
                   </p>
@@ -758,7 +775,7 @@ const AuthPage = ({}: AuthPageProps) => {
                 <Input
                   className="shadow-sm appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-ring"
                   id="email-forgot" type="email" placeholder="you@example.com" value={email}
-                  onChange={(e) => setEmail(e.target.value)} required disabled={loading} suppressHydrationWarning={true}
+                  onChange={(e) => setEmail(e.target.value)} required disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}
                 />
               </div>
               {/* Send Reset Link Button */}
@@ -770,7 +787,7 @@ const AuthPage = ({}: AuthPageProps) => {
               </div>
               {/* Back to Login Link */}
               <div className="text-center">
-                <Button type="button" variant="link" onClick={showLogin} className="text-sm" disabled={loading} suppressHydrationWarning={true}>
+                <Button type="button" variant="link" onClick={showLogin} className="text-sm" disabled={loading || !auth || !appCheckInitialized} suppressHydrationWarning={true}>
                   Back to Login
                 </Button>
               </div>
@@ -882,7 +899,7 @@ const AuthPage = ({}: AuthPageProps) => {
 
             {/* Back to Login Link */}
             <div className="text-center mt-4">
-                <Button type="button" variant="link" onClick={showLogin} className="text-sm" disabled={loading || isSendingMfaCode || isVerifyingMfaCode} suppressHydrationWarning={true}>
+                <Button type="button" variant="link" onClick={showLogin} className="text-sm" disabled={loading || isSendingMfaCode || isVerifyingMfaCode || !auth || !appCheckInitialized} suppressHydrationWarning={true}>
                   Cancel MFA / Back to Login
                 </Button>
             </div>
@@ -899,4 +916,3 @@ const AuthPage = ({}: AuthPageProps) => {
 };
 
 export default AuthPage;
-
