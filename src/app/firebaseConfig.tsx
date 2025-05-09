@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp, getApps } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check"; // Updated import
@@ -96,7 +97,8 @@ try {
                         "2. **Correct Site Key:** Is the `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` environment variable set correctly with the key from Google Cloud?\n" +
                         "3. **API Enabled:** Is the 'reCAPTCHA Enterprise API' enabled in your Google Cloud project?\n" +
                         "4. **Firebase App Check Link:** Is App Check correctly configured and linked to this ReCaptcha Enterprise key in the Firebase Console (Project Settings -> App Check)? Make sure enforcement is either 'Not enforced' or correctly set up for your reCAPTCHA provider if testing.\n" +
-                        "5. **Network Issues:** Are there any network issues (firewalls, browser extensions like ad blockers) blocking connections to Google services (e.g., google.com, gstatic.com, googleapis.com)?"
+                        "5. **Network Issues:** Are there any network issues (firewalls, browser extensions like ad blockers) blocking connections to Google services (e.g., google.com, gstatic.com, googleapis.com)?\n" +
+                        "6. **Billing Account:** Ensure your Google Cloud project has a valid billing account linked, as reCAPTCHA Enterprise may require it."
                     );
                 } else if (appCheckError.message.includes('fetch') || appCheckError.message.includes('NetworkError')) {
                     console.error("Hint: A network error occurred during App Check setup. Check internet connection and ensure firewall/proxy settings allow access to Google services (e.g., googleapis.com, gstatic.com).");
@@ -135,5 +137,29 @@ try {
 
 console.log(`Initialization Status - Firebase Core: ${appInitialized}, App Check: ${appCheckInitialized}`);
 
+if (appInitialized && !appCheckInitialized) {
+    console.error(
+        "\n******************************************************************************************\n" +
+        "CRITICAL: Firebase App Check FAILED to initialize. \n" +
+        "This means backend services (Authentication, Firestore, Cloud Functions, GenAI Flows, etc.) \n" +
+        "protected by App Check will likely FAIL with 'permission-denied' or similar errors. \n\n" +
+        "Please REVIEW THE CONSOLE LOGS ABOVE for specific 'appCheck/recaptcha-error' hints. \n" +
+        "Common causes include: \n" +
+        "  1. Incorrect NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY in your .env file. \n" +
+        "  2. Missing domain authorization (e.g., 'localhost' for dev, 'your-app-name.web.app' for prod) \n" +
+        "     in Google Cloud Console -> reCAPTCHA Enterprise -> Your Key -> Settings -> Domains. \n" +
+        "  3. 'reCAPTCHA Enterprise API' not enabled in your Google Cloud project. \n" +
+        "  4. Incorrect App Check setup in Firebase Console (e.g., provider not set to reCAPTCHA Enterprise, \n" +
+        "     wrong site key entered in Firebase Console, or enforcement not yet propagated). \n" +
+        "  5. For local development with enforced App Check: missing or expired \n" +
+        "     NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN in your .env file. \n" +
+        "  6. Network issues (firewall, ad-blockers) preventing reCAPTCHA scripts from loading/running. \n" +
+        "  7. Google Cloud project not linked to a billing account (required for reCAPTCHA Enterprise). \n" +
+        "******************************************************************************************\n"
+    );
+}
+
+
 // Export appCheckInitialized status so components can check it
 export { app, appInitialized, appCheckInitialized };
+

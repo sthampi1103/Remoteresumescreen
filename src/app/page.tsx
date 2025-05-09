@@ -73,7 +73,7 @@ export default function Home() {
     if (!appCheckInitialized) {
       toast({
         title: "App Check Security Alert",
-        description: "App Check failed to initialize. Key functionalities may be impaired or disabled. Please check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues) and verify your Firebase/Google Cloud App Check configuration.",
+        description: "App Check failed to initialize. Key functionalities (like AI analysis and Q&A generation) will be disabled or will not work correctly. Please check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues) and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).",
         variant: "destructive",
         duration: Infinity, // Make it sticky until dismissed or page reloads
       });
@@ -118,7 +118,7 @@ export default function Home() {
     if (!appCheckInitialized) {
       toast({
         title: "App Check Error",
-        description: "Cannot start analysis: App Check is not initialized. Please resolve configuration issues (see console).",
+        description: "Cannot start analysis: App Check is not initialized. Please resolve configuration issues (see console and verify domain authorization, API enablement, and site key).",
         variant: "destructive",
       });
       return;
@@ -144,7 +144,7 @@ export default function Home() {
       if (!appCheckInitialized) {
         toast({
           title: "App Check Error",
-          description: "Cannot generate Q&A: App Check is not initialized. Please resolve configuration issues (see console).",
+          description: "Cannot generate Q&A: App Check is not initialized. Please resolve configuration issues (see console and verify domain authorization, API enablement, and site key).",
           variant: "destructive",
         });
         return;
@@ -377,7 +377,7 @@ export default function Home() {
         return;
       }
       if (!appCheckInitialized) { // Double check App Check before expensive AI call
-        setError("App Check not initialized. Cannot perform AI operations.");
+        setError("App Check not initialized. Cannot perform AI operations. Please check console for 'appCheck/recaptcha-error' details and verify your Firebase/Google Cloud setup (domain authorization, API enabled, site key).");
         setLoading(false);
         return;
       }
@@ -400,7 +400,7 @@ export default function Home() {
       } catch (err: any) {
         console.error("Error ranking resumes:", err);
         if (err.message && (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error'))) {
-           setError("Failed to analyze resumes due to an App Check security error. Please check console for details and verify your Firebase/Google Cloud setup.");
+           setError("Failed to analyze resumes due to an App Check security error. Please check console for details and verify your Firebase/Google Cloud setup (domain authorization, API enabled, site key).");
         } else {
            setError(err.message || "An error occurred while analyzing resumes.");
         }

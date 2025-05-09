@@ -68,9 +68,9 @@ const AuthPage = ({}: AuthPageProps) => {
     // It runs when appInitialized or appCheckInitialized status changes, or if an error is already set (to avoid overwriting).
     if (appInitialized && !appCheckInitialized && !error) {
       setError(
-        "App Check Security Alert: Initialization failed. Functionality will be limited. " +
-        "Check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues). " +
-        "Verify your reCAPTCHA Enterprise setup in Google Cloud & Firebase project settings."
+        "App Check Security Alert: Initialization failed. Key app functionalities (like login, signup, and AI features) will be disabled or will not work correctly. " +
+        "Please check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error' or debug token issues). " +
+        "Verify your reCAPTCHA Enterprise setup in Google Cloud & Firebase project settings (ensure domain is authorized, API is enabled, and site key is correct)."
       );
     }
     // Note: We don't clear the error here if appCheckInitialized becomes true later,
@@ -184,7 +184,7 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Authentication might fail if App Check is enforced.");
-       setError("App Check is not ready. Login cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration.");
+       setError("App Check is not ready. Login cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
        setLoading(false);
        setLoadingMessage(null);
        return;
@@ -273,7 +273,7 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Sign-up might fail if App Check is enforced.");
-        setError("App Check is not ready. Sign up cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration.");
+        setError("App Check is not ready. Sign up cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
         setLoading(false);
         setLoadingMessage(null);
         return;
@@ -339,7 +339,7 @@ const AuthPage = ({}: AuthPageProps) => {
       }
        if (!appCheckInitialized) {
          console.warn("App Check not initialized. Sending MFA code might fail if App Check is enforced.");
-         setError("App Check is not ready. MFA code sending cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration and check console for 'appCheck/recaptcha-error'.");
+         setError("App Check is not ready. MFA code sending cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key) and check console for 'appCheck/recaptcha-error'.");
          return;
        }
 
@@ -418,7 +418,7 @@ const AuthPage = ({}: AuthPageProps) => {
       }
       if (!appCheckInitialized) {
         console.warn("App Check not initialized. Verifying MFA code might fail if App Check is enforced.");
-        setError("App Check is not ready. MFA code verification cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration and check console for 'appCheck/recaptcha-error'.");
+        setError("App Check is not ready. MFA code verification cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key) and check console for 'appCheck/recaptcha-error'.");
         return; 
       }
 
@@ -496,7 +496,7 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      if (!appCheckInitialized) {
        console.warn("App Check not initialized. Password reset might fail if App Check is enforced.");
-       setError("App Check is not ready. Password reset cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration.");
+       setError("App Check is not ready. Password reset cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
        setLoading(false);
        setLoadingMessage(null);
        return;
