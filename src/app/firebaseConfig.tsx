@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp, getApps } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check"; // Updated import
@@ -84,30 +83,41 @@ try {
           appCheckInitialized = true;
           console.log("Firebase App Check initialized successfully with ReCaptcha Enterprise provider.");
       } catch (appCheckError: any) {
-            console.error("Firebase App Check initialization failed:", appCheckError);
+            console.error("Firebase App Check initialization failed:", appCheckError.code, appCheckError.message);
             appCheckInitialized = false; // Ensure state reflects failure
 
              // Provide more specific guidance based on common errors
-            if (appCheckError instanceof Error) {
-                // Check specifically for recaptcha-error or appCheck/recaptcha-error
-                if (appCheckError.message.includes('reCAPTCHA error') || (appCheckError as any).code === 'appCheck/recaptcha-error' || (appCheckError as any).code === 'appcheck/recaptcha-error') { // Added lowercase variant
-                    console.error(
-                        "Hint (appCheck/recaptcha-error): This error strongly suggests a configuration problem. Please verify the following:\n" +
-                        "1. **Domain Authorization:** Is your application's domain (e.g., 'localhost' or your deployed URL like 'your-app.web.app') *explicitly* listed as an authorized domain in the **Google Cloud Console** for this specific reCAPTCHA Enterprise key? This is a common oversight.\n" +
-                        "2. **Correct Site Key:** Is the `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` environment variable set correctly with the key from Google Cloud?\n" +
-                        "3. **API Enabled:** Is the 'reCAPTCHA Enterprise API' enabled in your Google Cloud project?\n" +
-                        "4. **Firebase App Check Link:** Is App Check correctly configured and linked to this ReCaptcha Enterprise key in the Firebase Console (Project Settings -> App Check)? Make sure enforcement is either 'Not enforced' or correctly set up for your reCAPTCHA provider if testing.\n" +
-                        "5. **Network Issues:** Are there any network issues (firewalls, browser extensions like ad blockers) blocking connections to Google services (e.g., google.com, gstatic.com, googleapis.com)?\n" +
-                        "6. **Billing Account:** Ensure your Google Cloud project has a valid billing account linked, as reCAPTCHA Enterprise may require it."
+            if (appCheckError instanceof Error) { // Check if it's an Error object
+                if ((appCheckError as any).code === 'appCheck/fetch-status-error') {
+                     console.error(
+                        "CRITICAL Hint (appCheck/fetch-status-error - Often HTTP 403 Forbidden): This error means App Check token validation FAILED on Firebase servers.\n" +
+                        "Your requests to Firebase are being BLOCKED by App Check. Please verify IMMEDIATELY:\n" +
+                        "1. **Domain Authorization in GOOGLE CLOUD CONSOLE:** Is your application's domain (e.g., 'localhost', 'your-project-id.web.app') *EXPLICITLY* listed as an authorized domain for your reCAPTCHA Enterprise key? Go to Google Cloud Console -> Security -> reCAPTCHA Enterprise -> YOUR KEY -> Settings -> Domains. THIS IS THE MOST COMMON CAUSE.\n" +
+                        "2. **Correct Site Key:** Is `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` in your .env file *EXACTLY* the Site Key from your reCAPTCHA Enterprise console (for the *correct* Google Cloud project)?\n" +
+                        "3. **reCAPTCHA Enterprise API Enabled:** Is the 'reCAPTCHA Enterprise API' enabled in your Google Cloud project that's linked to this Firebase project?\n" +
+                        "4. **App Check Configuration in FIREBASE CONSOLE:** Is App Check configured in Firebase Console (Project Settings -> App Check -> Your Web App) to use reCAPTCHA Enterprise with the *correct* site key? Is enforcement set appropriately? (Try 'Not enforced' for initial testing if stuck, then re-enable).\n" +
+                        "5. **Debug Token (for 'localhost'):** If testing on 'localhost' AND App Check is 'Enforced' in Firebase: ensure `NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` is correctly set in your .env file and the token is valid/not expired. Also, ensure 'localhost' (and potentially `http://localhost:[port]`) is an authorized domain for your reCAPTCHA key in Google Cloud.\n" +
+                        "6. **Billing Account:** Is your Google Cloud Project linked to an active billing account? reCAPTCHA Enterprise is a paid service beyond the free tier and requires billing for full functionality and higher quotas.\n" +
+                        "7. **Firewall/Network:** Less likely for a 403 from App Check servers, but ensure no firewalls are blocking communication to `firebaseappcheck.googleapis.com`."
                     );
-                } else if (appCheckError.message.includes('fetch') || appCheckError.message.includes('NetworkError')) {
-                    console.error("Hint: A network error occurred during App Check setup. Check internet connection and ensure firewall/proxy settings allow access to Google services (e.g., googleapis.com, gstatic.com).");
+                } else if (appCheckError.message.includes('reCAPTCHA error') || (appCheckError as any).code === 'appCheck/recaptcha-error' || (appCheckError as any).code === 'appcheck/recaptcha-error') {
+                    console.error(
+                        "Hint (appCheck/recaptcha-error): This error strongly suggests a client-side reCAPTCHA setup problem. Please verify the following:\n" +
+                        "1. **Domain Authorization (Google Cloud):** Is your application's domain (e.g., 'localhost' or 'your-deployed-url.web.app') *explicitly* listed as an authorized domain in the **Google Cloud Console** for this specific reCAPTCHA Enterprise key?\n" +
+                        "2. **Correct Site Key:** Is the `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` environment variable set correctly with the key from Google Cloud?\n" +
+                        "3. **API Enabled (Google Cloud):** Is the 'reCAPTCHA Enterprise API' enabled in your Google Cloud project?\n" +
+                        "4. **Firebase App Check Link:** Is App Check correctly configured and linked to this ReCaptcha Enterprise key in the Firebase Console (Project Settings -> App Check)? \n" +
+                        "5. **Network Issues:** Are there any network issues (firewalls, browser extensions like ad blockers) blocking connections to Google services (e.g., google.com, gstatic.com, googleapis.com)?\n" +
+                        "6. **Billing Account (Google Cloud):** Ensure your Google Cloud project has a valid billing account linked, as reCAPTCHA Enterprise may require it for full functionality."
+                    );
+                } else if (appCheckError.message.includes('fetch') || appCheckError.message.includes('NetworkError')) { // More generic network error during setup
+                    console.error("Hint: A network error occurred during App Check client-side setup. Check internet connection and ensure firewall/proxy settings allow access to Google services (e.g., googleapis.com, gstatic.com). This is different from the 403 'fetch-status-error' which is a server-side rejection.");
                 } else if (appCheckError.message.includes('invalid-argument')) {
                      console.error("Hint: 'Invalid argument' during App Check setup often means the site key format is incorrect or there's a configuration mismatch between Firebase and Google Cloud.");
                 }
                  else {
                      // General App Check error
-                     console.error(`Hint: An unexpected App Check error occurred (${(appCheckError as any).code || 'unknown'}). Review Firebase project settings, App Check configuration (Firebase & Google Cloud), environment variables, and ensure the reCAPTCHA Enterprise API is enabled.`);
+                     console.error(`Hint: An unexpected App Check error occurred on the client-side (${(appCheckError as any).code || 'unknown code'}): ${appCheckError.message}. Review Firebase project settings, App Check configuration (Firebase & Google Cloud), environment variables, and ensure the reCAPTCHA Enterprise API is enabled.`);
                 }
             } else {
                  // Non-Error object thrown
@@ -139,23 +149,21 @@ console.log(`Initialization Status - Firebase Core: ${appInitialized}, App Check
 
 if (appInitialized && !appCheckInitialized) {
     console.error(
-        "\n******************************************************************************************\n" +
-        "CRITICAL: Firebase App Check FAILED to initialize. \n" +
-        "This means backend services (Authentication, Firestore, Cloud Functions, GenAI Flows, etc.) \n" +
-        "protected by App Check will likely FAIL with 'permission-denied' or similar errors. \n\n" +
-        "Please REVIEW THE CONSOLE LOGS ABOVE for specific 'appCheck/recaptcha-error' hints. \n" +
-        "Common causes include: \n" +
-        "  1. Incorrect NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY in your .env file. \n" +
-        "  2. Missing domain authorization (e.g., 'localhost' for dev, 'your-app-name.web.app' for prod) \n" +
-        "     in Google Cloud Console -> reCAPTCHA Enterprise -> Your Key -> Settings -> Domains. \n" +
-        "  3. 'reCAPTCHA Enterprise API' not enabled in your Google Cloud project. \n" +
-        "  4. Incorrect App Check setup in Firebase Console (e.g., provider not set to reCAPTCHA Enterprise, \n" +
-        "     wrong site key entered in Firebase Console, or enforcement not yet propagated). \n" +
-        "  5. For local development with enforced App Check: missing or expired \n" +
-        "     NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN in your .env file. \n" +
-        "  6. Network issues (firewall, ad-blockers) preventing reCAPTCHA scripts from loading/running. \n" +
-        "  7. Google Cloud project not linked to a billing account (required for reCAPTCHA Enterprise). \n" +
-        "******************************************************************************************\n"
+        "\n**************************************************************************************************************************************************\n" +
+        "CRITICAL: Firebase App Check FAILED to initialize OR is misconfigured, leading to request failures (like HTTP 403).\n" +
+        "This means backend services (Authentication, Firestore, Cloud Functions, GenAI Flows, etc.) protected by App Check WILL LIKELY FAIL.\n\n" +
+        "==> Please REVIEW THE DETAILED CONSOLE LOGS ABOVE for specific error codes (e.g., 'appCheck/fetch-status-error', 'appCheck/recaptcha-error') and HINTS. <==\n\n" +
+        "COMMON CAUSES for 'appCheck/fetch-status-error' (HTTP 403 - Forbidden by App Check Server):\n" +
+        "  1. DOMAIN NOT AUTHORIZED in Google Cloud Console: Your app's domain (e.g., 'localhost', 'your-project.web.app') MUST be in the allowed list for your reCAPTCHA Enterprise key.\n" +
+        "  2. INCORRECT `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` in your .env file.\n" +
+        "  3. 'reCAPTCHA Enterprise API' NOT ENABLED in your Google Cloud project.\n" +
+        "  4. Google Cloud Project NOT LINKED TO A BILLING ACCOUNT (reCAPTCHA Enterprise requires this).\n" +
+        "  5. Incorrect App Check setup in Firebase Console (provider, site key, or enforcement settings).\n" +
+        "  6. For 'localhost' with ENFORCED App Check: Missing or EXPIRED `NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` in .env, OR 'localhost' not authorized for the reCAPTCHA key.\n\n" +
+        "COMMON CAUSES for 'appCheck/recaptcha-error' (Client-side reCAPTCHA problem):\n" +
+        "  - Similar to above, often domain authorization or site key issues preventing the reCAPTCHA widget itself from working.\n" +
+        "  - Network issues (firewall, ad-blockers) blocking reCAPTCHA scripts.\n" +
+        "**************************************************************************************************************************************************\n"
     );
 }
 
