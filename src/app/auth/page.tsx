@@ -235,6 +235,9 @@ const AuthPage = ({}: AuthPageProps) => {
           } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
               console.warn("Login failed due to invalid credentials:", err.code);
               setError('Invalid credentials. Please check your email and password.');
+          } else if (err.code === 'auth/network-request-failed') {
+              console.error("Login failed due to a network error:", err.code, err.message);
+              setError('Login failed: A network error occurred. Please check your internet connection and try again. If the problem persists, a firewall or proxy might be blocking requests to Firebase.');
           } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                 // More specific App Check/reCAPTCHA error logging
                 console.error(`App Check/reCAPTCHA Error during login (${err.code}):`, err.message);
@@ -310,6 +313,9 @@ const AuthPage = ({}: AuthPageProps) => {
                 setError('Password is too weak. Please choose a stronger password (at least 6 characters).');
             } else if (err.code === 'auth/invalid-email') {
                 setError('Invalid email address format.');
+            } else if (err.code === 'auth/network-request-failed') {
+                console.error("Sign up failed due to a network error:", err.code, err.message);
+                setError('Sign up failed: A network error occurred. Please check your internet connection and try again. If the problem persists, a firewall or proxy might be blocking requests to Firebase.');
             } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                  // Specific App Check/reCAPTCHA error logging for sign up
                  console.error(`App Check/reCAPTCHA Error during sign up (${err.code}):`, err.message);
@@ -386,7 +392,10 @@ const AuthPage = ({}: AuthPageProps) => {
       } catch (err: any) {
           console.error("Error sending MFA code:", err);
           if (err instanceof FirebaseError) {
-              if (err.code.includes('recaptcha') || err.code.includes('app-check') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
+              if (err.code === 'auth/network-request-failed') {
+                   console.error("Sending MFA code failed due to a network error:", err.code, err.message);
+                   setError('Failed to send verification code: A network error occurred. Please check your internet connection and try again. If the problem persists, a firewall or proxy might be blocking requests to Firebase.');
+              } else if (err.code.includes('recaptcha') || err.code.includes('app-check') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                    console.error(`App Check/reCAPTCHA Error during MFA code sending (${err.code}):`, err.message);
                    let userFriendlyMessage = `Failed to send verification code due to a security check (${err.code}). `;
                      if (err.code.includes('recaptcha-error')) {
@@ -479,6 +488,9 @@ const AuthPage = ({}: AuthPageProps) => {
                      setMfaVerificationCode(''); // Clear old code
                      setLoadingMessage(null); // Clear loading message
                      // Should we reset reCAPTCHA here too? Likely handled by handleSendMfaCode reset.
+                } else if (err.code === 'auth/network-request-failed') {
+                     console.error("MFA code verification failed due to a network error:", err.code, err.message);
+                     setError('MFA verification failed: A network error occurred. Please check your internet connection and try again. If the problem persists, a firewall or proxy might be blocking requests to Firebase.');
                 } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                     console.error(`App Check/reCAPTCHA Error during MFA verification (${err.code}):`, err.message);
                     let userFriendlyMessage = `MFA verification failed due to a security check (${err.code}). `;
@@ -553,6 +565,9 @@ const AuthPage = ({}: AuthPageProps) => {
                setError(
                    'Email address not found or is invalid. Please enter a registered email address.'
                );
+           } else if (err.code === 'auth/network-request-failed') {
+                console.error("Password reset failed due to a network error:", err.code, err.message);
+                setError('Password reset failed: A network error occurred. Please check your internet connection and try again. If the problem persists, a firewall or proxy might be blocking requests to Firebase.');
            } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                console.error(`App Check/reCAPTCHA Error during password reset (${err.code}):`, err.message);
                 let userFriendlyMessage = `Password reset failed due to a security check (${err.code}). `;
@@ -916,3 +931,5 @@ const AuthPage = ({}: AuthPageProps) => {
 };
 
 export default AuthPage;
+
+    
