@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -81,8 +82,7 @@ const AuthPage = ({}: AuthPageProps) => {
      if (recaptchaVerifier) {
          setRecaptchaVerifier(null); // Clear the state
      }
-      // @ts-ignore
-     recaptchaWidgetId = null;
+     setRecaptchaWidgetId(null); // Use setter to clear widgetId state
 
       try {
         console.log("Initializing new RecaptchaVerifier...");
@@ -825,5 +825,7 @@ const AuthPage = ({}: AuthPageProps) => {
 };
 
 export default AuthPage;
+
+    
 
     
