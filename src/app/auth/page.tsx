@@ -77,10 +77,8 @@ const AuthPage = ({}: AuthPageProps) => {
        return;
       }
       
-      // Clear previous instance before rendering a new one
+      // Clear previous instance if it exists before rendering a new one
      if (recaptchaVerifier) {
-         console.log("Clearing existing reCAPTCHA verifier instance.");
-         recaptchaVerifier.clear();
          setRecaptchaVerifier(null); // Clear the state
      }
       // @ts-ignore
@@ -88,7 +86,7 @@ const AuthPage = ({}: AuthPageProps) => {
 
       try {
         console.log("Initializing new RecaptchaVerifier...");
-         recaptchaVerifier = new RecaptchaVerifier(auth, // Use auth from firebaseConfig
+         const newRecaptchaVerifier = new RecaptchaVerifier(auth, // Use auth from firebaseConfig
            recaptchaContainerRef.current,
            {
              size: 'invisible',
@@ -103,11 +101,12 @@ const AuthPage = ({}: AuthPageProps) => {
              }
            }
          );
+          setRecaptchaVerifier(newRecaptchaVerifier);
 
-         recaptchaVerifier.render().then((widgetId) => {
+         newRecaptchaVerifier.render().then((widgetId) => {
             if (widgetId !== undefined) {
                  setRecaptchaWidgetId(widgetId);
-                recaptchaWidgetId = widgetId;
+                // recaptchaWidgetId = widgetId; // Removed direct assignment
                 console.log("reCAPTCHA rendered successfully, widget ID:", widgetId);
             } else {
                  console.warn("reCAPTCHA rendered but returned undefined widget ID.");
