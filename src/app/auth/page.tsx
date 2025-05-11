@@ -23,11 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Icons } from '@/components/icons';
 
-// Global variable for RecaptchaVerifier to avoid re-rendering issues
-// @ts-ignore
-let recaptchaVerifier: RecaptchaVerifier | null = null;
-// @ts-ignore
-let recaptchaWidgetId: number | null = null;
 
 
 type AuthPageProps = {};
@@ -54,6 +49,10 @@ const AuthPage = ({}: AuthPageProps) => {
    const [isSendingMfaCode, setIsSendingMfaCode] = useState(false);
    const [isVerifyingMfaCode, setIsVerifyingMfaCode] = useState(false);
    const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+   // Use state for recaptchaVerifier and widgetId to manage their lifecycle
+   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+   const [recaptchaWidgetId, setRecaptchaWidgetId] = useState<number | null>(null);
+
 
   const router = useRouter();
 
@@ -77,13 +76,12 @@ const AuthPage = ({}: AuthPageProps) => {
        console.warn("Skipping reCAPTCHA setup: Firebase Auth not ready or container not found.");
        return;
       }
-
-     if (recaptchaVerifier && recaptchaVerifier.clear) {
-       console.log("Clearing previous reCAPTCHA verifier.");
-       recaptchaVerifier.clear();
-     }
-     if (recaptchaContainerRef.current) {
-        recaptchaContainerRef.current.innerHTML = '';
+      
+      // Clear previous instance before rendering a new one
+     if (recaptchaVerifier) {
+         console.log("Clearing existing reCAPTCHA verifier instance.");
+         recaptchaVerifier.clear();
+         setRecaptchaVerifier(null); // Clear the state
      }
       // @ts-ignore
      recaptchaWidgetId = null;
@@ -108,7 +106,7 @@ const AuthPage = ({}: AuthPageProps) => {
 
          recaptchaVerifier.render().then((widgetId) => {
             if (widgetId !== undefined) {
-                 // @ts-ignore
+                 setRecaptchaWidgetId(widgetId);
                 recaptchaWidgetId = widgetId;
                 console.log("reCAPTCHA rendered successfully, widget ID:", widgetId);
             } else {
@@ -129,18 +127,17 @@ const AuthPage = ({}: AuthPageProps) => {
       }
 
      return () => {
-        if (recaptchaVerifier && recaptchaVerifier.clear) {
+        if (recaptchaVerifier) { // Check if verifier exists in state
             console.log("Clearing reCAPTCHA verifier on component unmount.");
             recaptchaVerifier.clear();
-            recaptchaVerifier = null;
-             // @ts-ignore
-            recaptchaWidgetId = null;
+            setRecaptchaVerifier(null); // Clear state
+            setRecaptchaWidgetId(null); // Clear state
         }
          if (recaptchaContainerRef.current) {
              recaptchaContainerRef.current.innerHTML = '';
          }
      };
-   }, [appInitialized, authInitialized, auth]); // Depend on auth and authInitialized
+   }, [appInitialized, authInitialized, auth]); // Depend on these values to trigger setup
 
   const handleLoginSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
