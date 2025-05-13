@@ -16,10 +16,10 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Icons} from '@/components/icons';
 import {useToast} from '@/hooks/use-toast';
 import { Toaster } from "@/components/ui/toaster";
-import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig'; // Import appCheckInitialized, auth, authInitialized
-import { signOut } from 'firebase/auth'; // Import signOut
+import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig'; 
+import { signOut } from 'firebase/auth'; 
 import { rankResumes, RankResumesOutput } from '@/ai/flows/rank-resumes';
-import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions'; // Import updated flow
+import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions'; 
 import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
@@ -63,7 +63,6 @@ export default function Home() {
          variant: "destructive",
          duration: Infinity,
        });
-       // Auth check below will likely redirect.
     }
     if (!auth) { 
        console.error("HomePage: Auth instance not available from firebaseConfig. Redirecting to /auth.");
@@ -98,7 +97,6 @@ export default function Home() {
   }, [router, appInitialized, authInitialized, auth, appCheckInitialized, toast]);
 
 
-  // Determine if critical system components (Auth and potentially App Check) are ready for operations
   const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
   const isSystemReadyForOperations = authInitialized && auth && (!siteKeyProvided || appCheckInitialized);
 
@@ -151,11 +149,9 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResults([]);
-    setIsResultsDisplayed(true); // Indicates an attempt to display results will be made
-    setActiveTab("results"); // Switch to results tab
-    // setIsStartActive(false); // Start button will be disabled by useEffect due to isResultsDisplayed
+    setIsResultsDisplayed(true); 
+    setActiveTab("results"); 
   
-    // Actual data fetching is now in a useEffect triggered by isResultsDisplayed
   };
 
    const handleGenerateQnA = async () => {
@@ -184,8 +180,8 @@ export default function Home() {
       setIsGeneratingQnA(true);
       setQnAGenerationError(null);
       setInterviewQnA([]);
-      setShowInterviewQnA(true); // Indicates an attempt to show QnA will be made
-      setActiveTab("questions"); // Switch to QnA tab
+      setShowInterviewQnA(true); 
+      setActiveTab("questions"); 
 
       try {
           console.log("HomePage: Calling generateInterviewQnA AI flow...");
@@ -204,7 +200,7 @@ export default function Home() {
               if (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error') || err.message.includes('fetch-status-error')) {
                 userMessage = "Failed to generate Q&A due to an App Check security error. Please check console for details and verify your Firebase/Google Cloud setup (domain authorization, API enabled, site key).";
               } else if (err.code === 'functions/unavailable' || err.code === 'unavailable' || err.message.toLowerCase().includes('network') || err.message.toLowerCase().includes('request failed')) {
-                userMessage = "Failed to generate Q&A due to a network issue or the AI service being temporarily unavailable. Please check your connection and try again later.";
+                userMessage = "Failed to generate Q&A due to a network issue or the AI service being temporarily unavailable. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, www.google.com/recaptcha, www.gstatic.com/recaptcha). Try again later.";
               } else {
                 userMessage = `Error generating Q&A: ${err.message}`;
               }
@@ -222,8 +218,7 @@ export default function Home() {
     setResumesText('');
     setResults([]);
     setInterviewQnA([]);
-    // setIsStartActive(false); // Will be handled by useEffect
-    setIsResetActive(false); // Will be handled by useEffect
+    setIsResetActive(false); 
     setIsResultsDisplayed(false);
     setShowInterviewQnA(false);
     setLoading(false);
@@ -232,8 +227,8 @@ export default function Home() {
     setQnAGenerationError(null);
     setIsJDValid(false);
     setAreResumesValid(false);
-    setClearJDTrigger(prev => !prev); // Toggle to trigger clear in child
-    setClearResumesTrigger(prev => !prev); // Toggle to trigger clear in child
+    setClearJDTrigger(prev => !prev); 
+    setClearResumesTrigger(prev => !prev); 
     setActiveTab("results");
     toast({ title: "Inputs Cleared", description: "All inputs and results have been reset.", variant: "default" });
   };
@@ -248,7 +243,7 @@ export default function Home() {
       console.log("HomePage: Signing out user...");
       await signOut(auth);
       toast({ title: "Signed Out", description: "You have been successfully signed out.", variant: "default" });
-      router.push('/auth'); // This will trigger the auth check again
+      router.push('/auth'); 
     } catch (error: any) {
       console.error("HomePage: Sign out error:", error.code, error.message, error);
        toast({ title: "Sign Out Error", description: `Failed to sign out: ${error.message}`, variant: "destructive" });
@@ -256,12 +251,8 @@ export default function Home() {
   };
 
   const handleClearComplete = useCallback((type: 'jd' | 'resumes') => {
-    // This function is mostly to acknowledge the child component has cleared.
-    // The main state reset happens in handleReset.
     if (type === 'jd') {
-      // setClearJDTrigger(false); // No need to set to false, it's a toggle
     } else if (type === 'resumes') {
-      // setClearResumesTrigger(false); // No need to set to false
     }
   }, []);
 
@@ -331,7 +322,7 @@ export default function Home() {
     });
 
     worksheet.columns.forEach(column => {
-        if (column && column.eachCell) { // Ensure column and eachCell are defined
+        if (column && column.eachCell) { 
             let maxLength = 0;
             column.eachCell({ includeEmpty: true }, cell => {
                 let cellLength = cell.value ? cell.value.toString().length : 0;
@@ -396,8 +387,8 @@ export default function Home() {
 
          doc.setFont(undefined, 'normal');
          doc.setFontSize(10);
-         doc.setTextColor(100); // Gray color for answer
-         const answerLines = doc.splitTextToSize(`A: ${item.answer}`, doc.internal.pageSize.width - margin * 2 - 5); // Indent answer slightly
+         doc.setTextColor(100); 
+         const answerLines = doc.splitTextToSize(`A: ${item.answer}`, doc.internal.pageSize.width - margin * 2 - 5); 
          const answerHeight = answerLines.length * (doc.getLineHeight() / doc.internal.scaleFactor);
 
           if (yPos + answerHeight > pageHeight - margin) {
@@ -407,7 +398,7 @@ export default function Home() {
 
          doc.text(answerLines, margin + 5, yPos);
          yPos += answerHeight + pairSpacing;
-         doc.setTextColor(0); // Reset to black
+         doc.setTextColor(0); 
      });
 
      doc.save('interview_qna.pdf');
@@ -428,7 +419,7 @@ export default function Home() {
       console.log("HomePage: useEffect for fetchData triggered, calling rankResumes AI flow...");
       setLoading(true);
       setError(null);
-      setResults([]); // Clear previous results before new fetch
+      setResults([]); 
 
       try {
         const resumesArray = resumesText.split(/\n\s*\n\s*\n/).map(r => r.trim()).filter(text => text !== '');
@@ -450,7 +441,7 @@ export default function Home() {
               if (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error') || err.message.includes('fetch-status-error')) {
                 userMessage = "Failed to analyze resumes due to an App Check security error. Please check console for details and verify your Firebase/Google Cloud setup (domain authorization, API enabled, site key).";
               } else if (err.code === 'functions/unavailable' || err.code === 'unavailable' || err.message.toLowerCase().includes('network') || err.message.toLowerCase().includes('request failed')) {
-                userMessage = "Failed to analyze resumes due to a network issue or the AI service being temporarily unavailable. Please check your connection and try again later.";
+                userMessage = "Failed to analyze resumes due to a network issue or the AI service being temporarily unavailable. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, www.google.com/recaptcha, www.gstatic.com/recaptcha). Try again later.";
               } else {
                 userMessage = `Error analyzing resumes: ${err.message}`;
               }
@@ -463,11 +454,11 @@ export default function Home() {
       }
     };
 
-    if (isResultsDisplayed) { // Only run if we intend to display results
+    if (isResultsDisplayed) { 
         fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations]); // Dependencies that trigger re-fetch
+  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations]); 
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -535,7 +526,7 @@ export default function Home() {
             </div>
              <Button
                 onClick={handleGenerateQnA}
-                disabled={!isJDValid || isGeneratingQnA || !isSystemReadyForOperations || loading} // Disable if main analysis is loading too
+                disabled={!isJDValid || isGeneratingQnA || !isSystemReadyForOperations || loading} 
                 aria-label="Generate interview Q&A based on job description"
                 className="mt-4 print:hidden"
                 suppressHydrationWarning={true}
@@ -587,7 +578,7 @@ export default function Home() {
           <Button
             variant="outline"
             onClick={handleReset}
-            disabled={!isResetActive && !loading && !isGeneratingQnA} // Enable if reset is active or nothing is loading
+            disabled={!isResetActive && !loading && !isGeneratingQnA} 
             aria-label="Reset all inputs and results"
             suppressHydrationWarning={true}
              size="lg"
@@ -606,7 +597,7 @@ export default function Home() {
                </TabsList>
                <TabsContent value="results">
                  <h2 id="analysis-results-heading" className="text-xl font-semibold my-4 sr-only">Resume Ranking Results</h2>
-                  {loading && isResultsDisplayed ? ( // Show loading specific to results tab if it was the one triggered
+                  {loading && isResultsDisplayed ? ( 
                     <Alert>
                       <Icons.loader className="h-4 w-4 animate-spin" />
                       <AlertTitle>Analyzing Resumes</AlertTitle>
@@ -614,7 +605,7 @@ export default function Home() {
                         Please wait while the resumes are being analyzed...
                       </AlertDescription>
                     </Alert>
-                  ) : error && isResultsDisplayed ? ( // Show error specific to results tab
+                  ) : error && isResultsDisplayed ? ( 
                        <Alert variant="destructive">
                          <Icons.alertCircle className="h-4 w-4" />
                          <AlertTitle>Error Ranking Resumes</AlertTitle>
@@ -636,7 +627,7 @@ export default function Home() {
                           </Button>
                         </div>
                     </>
-                  ) : isResultsDisplayed && !loading ? ( // If attempted display but no results and not loading (e.g. empty results from AI)
+                  ) : isResultsDisplayed && !loading ? ( 
                     <p className="text-center text-muted-foreground mt-4">No ranking results to display. The AI might not have found matches or there was an issue processing.</p>
                   ): null}
                </TabsContent>
@@ -673,12 +664,12 @@ export default function Home() {
                          </Button>
                        </div>
                      </>
-                   ) : showInterviewQnA && !isGeneratingQnA ? ( // If attempted display but no QnA and not loading
+                   ) : showInterviewQnA && !isGeneratingQnA ? ( 
                     <p className="text-center text-muted-foreground mt-4">No interview Q&amp;A to display. The AI might not have generated questions based on the job description.</p>
                    ) : null}
                 </TabsContent>
              </Tabs>
-             {/* Content for printing - shown only when printing */}
+             
              <div className="hidden print:block">
                 {isResultsDisplayed && results.length > 0 && (
                     <div className="mb-8">
