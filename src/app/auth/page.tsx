@@ -1,4 +1,3 @@
-
 // src/app/auth/page.tsx
 'use client';
 
@@ -17,7 +16,7 @@ import {
   MultiFactorResolver,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
-import { appInitialized, auth, authInitialized, appCheckInitialized } from '../firebaseConfig';
+import { appInitialized, auth, authInitialized, appCheckInitialized } from '@/app/firebaseConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -95,7 +94,8 @@ const AuthPage = ({}: AuthPageProps) => {
      if (recaptchaContainerRef.current) { 
         recaptchaContainerRef.current.innerHTML = ''; 
      }
-     setRecaptchaWidgetId(null); 
+    
+     setRecaptchaWidgetId(null); // Reset internal widget ID state
 
       try {
         console.log("AuthPage: Initializing new RecaptchaVerifier for MFA phone auth...");
@@ -129,8 +129,8 @@ const AuthPage = ({}: AuthPageProps) => {
              console.error("AuthPage: reCAPTCHA (for MFA) render error:", renderError);
             if (renderError.message && renderError.message.includes('already rendered')) {
                  console.warn("AuthPage: reCAPTCHA (for MFA) was likely already rendered in the container. This usually means the container wasn't properly cleared or multiple instances are being created.");
-            } else if (renderError.message && renderError.message.toLowerCase().includes('recaptcha')) {
-                 setError(`Failed to render reCAPTCHA for MFA. This is often due to configuration issues. Please check: 1. Your domain ('${window.location.hostname}') is authorized for reCAPTCHA in Google Cloud. 2. The reCAPTCHA API is enabled. 3. Network connectivity to Google services (e.g., www.google.com/recaptcha, www.gstatic.com/recaptcha). Detailed error: ${renderError.message}`);
+            } else if (renderError.message && renderError.message.toLowerCase().includes('recaptcha') || renderError.code === 'auth/network-request-failed') {
+                 setError(`Failed to render reCAPTCHA for MFA (Error: ${renderError.code || 'unknown'}). This is often due to configuration issues or network problems. Please check: 1. Your domain ('${window.location.hostname}') is authorized for reCAPTCHA in Google Cloud. 2. The reCAPTCHA API is enabled. 3. Network connectivity to Google services (e.g., www.google.com/recaptcha, www.gstatic.com/recaptcha). Ensure no firewall, VPN, or ad-blocker is interfering. Detailed error: ${renderError.message}`);
             } else {
                 setError("Failed to render reCAPTCHA for MFA. Phone authentication may fail. Check console for Firebase hints about 'already rendered' or other setup issues.");
             }
@@ -138,7 +138,11 @@ const AuthPage = ({}: AuthPageProps) => {
 
       } catch (creationError: any) {
           console.error("AuthPage: Error creating RecaptchaVerifier instance (for MFA):", creationError.code, creationError.message, creationError);
-          setError("Failed to initialize reCAPTCHA verifier for MFA. Authentication involving phone may fail. Ensure only one reCAPTCHA container is present and it's correctly referenced.");
+          if (creationError.code === 'auth/network-request-failed') {
+            setError(`Failed to initialize reCAPTCHA verifier for MFA due to a network error (Code: ${creationError.code}). Ensure your internet connection is stable and that no firewall, VPN, or ad-blocker is blocking requests to Google services (e.g., www.google.com/recaptcha, www.gstatic.com/recaptcha). Also verify your Firebase project configuration and check status.firebase.google.com. Details: ${creationError.message}`);
+          } else {
+            setError("Failed to initialize reCAPTCHA verifier for MFA. Authentication involving phone may fail. Ensure only one reCAPTCHA container is present and it's correctly referenced.");
+          }
       }
 
      return () => {
@@ -174,12 +178,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Logging in...');
-    //console.log("AuthPage: Attempting sign-in with email:", email);
+    console.log("AuthPage: Attempting sign-in with email:", email);
 
     try {
       console.log("AuthPage: Calling signInWithEmailAndPassword...");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      //console.log("AuthPage: Sign in successful (MFA if required will be next):", userCredential.user?.uid);
+      console.log("AuthPage: Sign in successful (MFA if required will be next):", userCredential.user?.uid);
       setLoadingMessage('Login successful!');
       router.push('/'); 
     } catch (err: any) {
@@ -214,8 +218,8 @@ const AuthPage = ({}: AuthPageProps) => {
               console.warn("AuthPage: Login failed due to invalid credentials:", err.code);
               setError('Invalid credentials. Please check your email and password.');
           } else if (err.code === 'auth/network-request-failed') {
-              console.error("AuthPage: Login failed due to a network error:", err.code, err.message);
-              setError('Login failed due to a network issue. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, www.google.com/recaptcha, www.gstatic.com/recaptcha). Also verify your Firebase project configuration (API keys, authorized domains) and that Firebase services are operational at status.firebase.google.com. App Check issues or reCAPTCHA loading failures can also manifest as network errors.');
+              console.error("AuthPage: Login failed due to a network error (auth/network-request-failed):", err.code, err.message);
+              setError('Login failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
           } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                 console.error(`AuthPage: App Check/reCAPTCHA Error during login (${err.code}):`, err.message);
                 let userFriendlyMessage = `Authentication failed due to a security check (${err.code}). `;
@@ -263,12 +267,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Creating account...');
-    //console.log("AuthPage: Attempting sign-up with email:", email);
+    console.log("AuthPage: Attempting sign-up with email:", email);
 
     try {
       console.log("AuthPage: Calling createUserWithEmailAndPassword...");
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      //console.log("AuthPage: Sign up successful:", userCredential.user?.uid);
+      console.log("AuthPage: Sign up successful:", userCredential.user?.uid);
       setIsSignUp(false);
       setSuccessMessage('Account created successfully! Please log in.');
       setEmail('');
@@ -284,8 +288,8 @@ const AuthPage = ({}: AuthPageProps) => {
             } else if (err.code === 'auth/invalid-email') {
                 setError('Invalid email address format.');
             } else if (err.code === 'auth/network-request-failed') {
-                console.error("AuthPage: Sign up failed due to a network error:", err.code, err.message);
-                 setError('Sign up failed due to a network issue. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, www.google.com/recaptcha, www.gstatic.com/recaptcha). Also verify your Firebase project configuration and that Firebase services are operational. App Check or reCAPTCHA loading failures can also manifest as network errors.');
+                console.error("AuthPage: Sign up failed due to a network error (auth/network-request-failed):", err.code, err.message);
+                 setError('Sign up failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
             } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                  console.error(`AuthPage: App Check/reCAPTCHA Error during sign up (${err.code}):`, err.message);
                  let userFriendlyMessage = `Sign up failed due to a security check (${err.code}). `;
@@ -336,23 +340,23 @@ const AuthPage = ({}: AuthPageProps) => {
       setError(null);
       setIsSendingMfaCode(true);
       setLoadingMessage('Sending verification code...');
-      //console.log("AuthPage: Sending MFA code to selected hint:", selectedMfaHint.phoneNumber, "UID:", selectedMfaHint.uid);
-      //console.log("AuthPage: RecaptchaVerifier is:", recaptchaVerifier);
+      console.log("AuthPage: Sending MFA code to selected hint:", selectedMfaHint.phoneNumber, "UID:", selectedMfaHint.uid);
+      console.log("AuthPage: RecaptchaVerifier is:", recaptchaVerifier);
 
 
       try {
           if (!auth) throw new Error("Firebase Auth not initialized for MFA."); 
-          //console.log("AuthPage: Requesting MFA code for hint UID:", selectedMfaHint.uid);
+          console.log("AuthPage: Requesting MFA code for hint UID:", selectedMfaHint.uid);
           const phoneInfoOptions = {
               multiFactorHint: selectedMfaHint,
               session: mfaResolver.session
           };
           const phoneAuthProvider = new PhoneAuthProvider(auth);
-          //console.log("AuthPage: PhoneAuthProvider instance created:", phoneAuthProvider);
+          console.log("AuthPage: PhoneAuthProvider instance created:", phoneAuthProvider);
 
           console.log("AuthPage: Calling phoneAuthProvider.verifyPhoneNumber with reCAPTCHA verifier (for MFA)... Options:", JSON.stringify(phoneInfoOptions, null, 2));
           const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
-           //console.log("AuthPage: Verification ID received:", verificationId);
+           console.log("AuthPage: Verification ID received:", verificationId);
            setMfaVerificationId(verificationId);
            setLoadingMessage('Verification code sent. Enter the code below.');
 
@@ -360,8 +364,8 @@ const AuthPage = ({}: AuthPageProps) => {
           console.error("AuthPage: Error sending MFA code:", err.code, err.message, err);
           if (err instanceof FirebaseError) {
               if (err.code === 'auth/network-request-failed') {
-                   console.error("AuthPage: Sending MFA code failed due to a network error:", err.code, err.message);
-                   setError('Failed to send verification code due to a network issue. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, www.google.com/recaptcha, www.gstatic.com/recaptcha). Also verify Firebase project configuration and service status. App Check or reCAPTCHA loading failures can also manifest as network errors.');
+                   console.error("AuthPage: Sending MFA code failed due to a network error (auth/network-request-failed):", err.code, err.message);
+                   setError('Failed to send verification code due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
               } else if (err.code.includes('recaptcha') || err.code.includes('app-check') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                    console.error(`AuthPage: App Check/reCAPTCHA Error during MFA code sending (${err.code}):`, err.message);
                    let userFriendlyMessage = `Failed to send verification code due to a security check (${err.code}). `;
@@ -382,6 +386,8 @@ const AuthPage = ({}: AuthPageProps) => {
                    setError("Invalid phone number format provided for MFA.");
               } else if (err.code === 'auth/too-many-requests') {
                    setError("Too many verification code requests. Please wait a while before trying again.");
+              } else if (err.code === 'auth/code-expired') { // Handling expired code from send attempt if reCAPTCHA was already used
+                   setError("Verification attempt failed as the previous reCAPTCHA challenge may have expired. Please try sending the code again.");
               } else {
                    setError(`Failed to send verification code: ${err.message} (Code: ${err.code}). Please try again or contact support.`);
               }
@@ -396,7 +402,7 @@ const AuthPage = ({}: AuthPageProps) => {
                try {
                   // @ts-ignore
                    window.grecaptcha.reset(recaptchaWidgetIdInternal);
-                   console.log("AuthPage: reCAPTCHA widget (for MFA) reset after attempting to send MFA code.");
+                   console.log("AuthPage: reCAPTCHA widget (for MFA) reset after attempting to send MFA code. Widget ID:", recaptchaWidgetIdInternal);
                } catch (e) {
                    console.warn("AuthPage: Could not reset reCAPTCHA widget (for MFA) after sending MFA code:", e);
                }
@@ -424,9 +430,9 @@ const AuthPage = ({}: AuthPageProps) => {
       setError(null);
       setIsVerifyingMfaCode(true);
       setLoadingMessage('Verifying code...');
-      //console.log("AuthPage: Verifying MFA code:", mfaVerificationCode);
-      //console.log("AuthPage: Using mfaResolver:", mfaResolver);
-      //console.log("AuthPage: Using mfaVerificationId:", mfaVerificationId);
+      console.log("AuthPage: Verifying MFA code:", mfaVerificationCode);
+      console.log("AuthPage: Using mfaResolver:", mfaResolver);
+      console.log("AuthPage: Using mfaVerificationId:", mfaVerificationId);
 
 
       try {
@@ -435,9 +441,9 @@ const AuthPage = ({}: AuthPageProps) => {
               mfaVerificationId,
               mfaVerificationCode
           );
-          //console.log("AuthPage: MFA assertion created:", cred);
+          console.log("AuthPage: MFA assertion created:", cred);
           const userCredential = await mfaResolver.resolveSignIn(cred);
-          //console.log("AuthPage: MFA verification successful, signed in:", userCredential.user?.uid);
+          console.log("AuthPage: MFA verification successful, signed in:", userCredential.user?.uid);
           setLoadingMessage('Login successful!');
           router.push('/'); 
 
@@ -448,14 +454,16 @@ const AuthPage = ({}: AuthPageProps) => {
                    setError("Invalid verification code. Please try again.");
                 } else if (err.code === 'auth/code-expired') {
                      setError("Verification code has expired. Please request a new one.");
-                     setIsMFAPrompt(true); 
-                     setSelectedMfaHint(null); 
-                     setMfaVerificationId(null); 
-                     setMfaVerificationCode(''); 
+                     // Reset MFA state to allow re-sending code
+                     setMfaVerificationId(null); // Clear old verification ID
+                     setMfaVerificationCode(''); // Clear old code input
+                     setSelectedMfaHint(null); // Deselect hint to re-trigger send flow
+                     // Do not clear mfaResolver here as it's needed for a new attempt
+                     // setIsMFAPrompt(true); // Already true
                      setLoadingMessage(null);
                 } else if (err.code === 'auth/network-request-failed') {
-                     console.error("AuthPage: MFA code verification failed due to a network error:", err.code, err.message);
-                     setError('MFA verification failed due to a network issue. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com). Verify Firebase project configuration and service status. App Check or reCAPTCHA loading failures can also manifest as network errors.');
+                     console.error("AuthPage: MFA code verification failed due to a network error (auth/network-request-failed):", err.code, err.message);
+                     setError('MFA verification failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com. 5. Visit status.firebase.google.com for service outages.');
                 } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                     console.error(`AuthPage: App Check/reCAPTCHA Error during MFA verification (${err.code}):`, err.message);
                     let userFriendlyMessage = `MFA verification failed due to a security check (${err.code}). `;
@@ -503,12 +511,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Sending password reset email...');
-    //console.log("AuthPage: Attempting to send password reset email to:", email);
+    console.log("AuthPage: Attempting to send password reset email to:", email);
 
     try {
-      //console.log("AuthPage: Calling sendPasswordResetEmail...");
+      console.log("AuthPage: Calling sendPasswordResetEmail...");
       await sendPasswordResetEmail(auth, email);
-      //console.log("AuthPage: Password reset email sent successfully to:", email);
+      console.log("AuthPage: Password reset email sent successfully to:", email);
       setSuccessMessage(
         `Password reset email sent to ${email}. Please check your inbox (and spam folder).`
       );
@@ -523,8 +531,8 @@ const AuthPage = ({}: AuthPageProps) => {
                    'Email address not found or is invalid. Please enter a registered email address.'
                );
            } else if (err.code === 'auth/network-request-failed') {
-                console.error("AuthPage: Password reset failed due to a network error:", err.code, err.message);
-                setError('Password reset failed due to a network issue. Check your internet connection and ensure that your network/firewall/VPN/ad-blocker is not blocking requests to Google services (e.g., google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com). Verify Firebase project configuration and service status. App Check or reCAPTCHA loading failures can also manifest as network errors.');
+                console.error("AuthPage: Password reset failed due to a network error (auth/network-request-failed):", err.code, err.message);
+                setError('Password reset failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com. 5. Visit status.firebase.google.com for service outages.');
            } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
                console.error(`AuthPage: App Check/reCAPTCHA Error during password reset (${err.code}):`, err.message);
                 let userFriendlyMessage = `Password reset failed due to a security check (${err.code}). `;
@@ -853,6 +861,3 @@ const AuthPage = ({}: AuthPageProps) => {
 };
 
 export default AuthPage;
-
-
-    
