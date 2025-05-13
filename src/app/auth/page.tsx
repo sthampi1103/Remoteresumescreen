@@ -342,7 +342,7 @@ const AuthPage = ({}: AuthPageProps) => {
 
       try {
           if (!auth) throw new Error("Firebase Auth not initialized for MFA."); 
-          console.log("AuthPage: Requesting MFA code for hint UID:", selectedMfaHint.uid);
+          //console.log("AuthPage: Requesting MFA code for hint UID:", selectedMfaHint.uid);
           const phoneInfoOptions = {
               multiFactorHint: selectedMfaHint,
               session: mfaResolver.session
@@ -350,7 +350,7 @@ const AuthPage = ({}: AuthPageProps) => {
           const phoneAuthProvider = new PhoneAuthProvider(auth);
           //console.log("AuthPage: PhoneAuthProvider instance created:", phoneAuthProvider);
 
-          //console.log("AuthPage: Calling phoneAuthProvider.verifyPhoneNumber with reCAPTCHA verifier (for MFA)... Options:", JSON.stringify(phoneInfoOptions, null, 2));
+          console.log("AuthPage: Calling phoneAuthProvider.verifyPhoneNumber with reCAPTCHA verifier (for MFA)... Options:", JSON.stringify(phoneInfoOptions, null, 2));
           const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
            //console.log("AuthPage: Verification ID received:", verificationId);
            setMfaVerificationId(verificationId);
