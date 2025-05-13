@@ -66,6 +66,7 @@ try {
     // Log the site key for debugging
     console.log("NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey);
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
+    console.log("NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN:", debugToken);
 
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') { // Added trim check & authInitialized
         console.log("Attempting to initialize Firebase App Check with ReCaptcha Enterprise...");
