@@ -51,7 +51,7 @@ const AuthPage = ({}: AuthPageProps) => {
   const router = useRouter();
 
   const setRecaptchaWidgetId = (id: number | null) => {
-    console.log("AuthPage: Setting reCAPTCHA widget ID (for MFA):", id);
+    //console.log("AuthPage: Setting reCAPTCHA widget ID (for MFA):", id);
     setRecaptchaWidgetIdInternal(id);
   };
 
@@ -174,12 +174,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Logging in...');
-    console.log("AuthPage: Attempting sign-in with email:", email);
+    //console.log("AuthPage: Attempting sign-in with email:", email);
 
     try {
       console.log("AuthPage: Calling signInWithEmailAndPassword...");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("AuthPage: Sign in successful (MFA if required will be next):", userCredential.user?.uid);
+      //console.log("AuthPage: Sign in successful (MFA if required will be next):", userCredential.user?.uid);
       setLoadingMessage('Login successful!');
       router.push('/'); 
     } catch (err: any) {
@@ -263,12 +263,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Creating account...');
-    console.log("AuthPage: Attempting sign-up with email:", email);
+    //console.log("AuthPage: Attempting sign-up with email:", email);
 
     try {
       console.log("AuthPage: Calling createUserWithEmailAndPassword...");
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("AuthPage: Sign up successful:", userCredential.user?.uid);
+      //console.log("AuthPage: Sign up successful:", userCredential.user?.uid);
       setIsSignUp(false);
       setSuccessMessage('Account created successfully! Please log in.');
       setEmail('');
@@ -336,8 +336,8 @@ const AuthPage = ({}: AuthPageProps) => {
       setError(null);
       setIsSendingMfaCode(true);
       setLoadingMessage('Sending verification code...');
-      console.log("AuthPage: Sending MFA code to selected hint:", selectedMfaHint.phoneNumber, "UID:", selectedMfaHint.uid);
-      console.log("AuthPage: RecaptchaVerifier is:", recaptchaVerifier);
+      //console.log("AuthPage: Sending MFA code to selected hint:", selectedMfaHint.phoneNumber, "UID:", selectedMfaHint.uid);
+      //console.log("AuthPage: RecaptchaVerifier is:", recaptchaVerifier);
 
 
       try {
@@ -348,11 +348,11 @@ const AuthPage = ({}: AuthPageProps) => {
               session: mfaResolver.session
           };
           const phoneAuthProvider = new PhoneAuthProvider(auth);
-          console.log("AuthPage: PhoneAuthProvider instance created:", phoneAuthProvider);
+          //console.log("AuthPage: PhoneAuthProvider instance created:", phoneAuthProvider);
 
-          console.log("AuthPage: Calling phoneAuthProvider.verifyPhoneNumber with reCAPTCHA verifier (for MFA)... Options:", JSON.stringify(phoneInfoOptions, null, 2));
+          //console.log("AuthPage: Calling phoneAuthProvider.verifyPhoneNumber with reCAPTCHA verifier (for MFA)... Options:", JSON.stringify(phoneInfoOptions, null, 2));
           const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
-           console.log("AuthPage: Verification ID received:", verificationId);
+           //console.log("AuthPage: Verification ID received:", verificationId);
            setMfaVerificationId(verificationId);
            setLoadingMessage('Verification code sent. Enter the code below.');
 
@@ -424,9 +424,9 @@ const AuthPage = ({}: AuthPageProps) => {
       setError(null);
       setIsVerifyingMfaCode(true);
       setLoadingMessage('Verifying code...');
-      console.log("AuthPage: Verifying MFA code:", mfaVerificationCode);
-      console.log("AuthPage: Using mfaResolver:", mfaResolver);
-      console.log("AuthPage: Using mfaVerificationId:", mfaVerificationId);
+      //console.log("AuthPage: Verifying MFA code:", mfaVerificationCode);
+      //console.log("AuthPage: Using mfaResolver:", mfaResolver);
+      //console.log("AuthPage: Using mfaVerificationId:", mfaVerificationId);
 
 
       try {
@@ -435,9 +435,9 @@ const AuthPage = ({}: AuthPageProps) => {
               mfaVerificationId,
               mfaVerificationCode
           );
-          console.log("AuthPage: MFA assertion created:", cred);
+          //console.log("AuthPage: MFA assertion created:", cred);
           const userCredential = await mfaResolver.resolveSignIn(cred);
-          console.log("AuthPage: MFA verification successful, signed in:", userCredential.user?.uid);
+          //console.log("AuthPage: MFA verification successful, signed in:", userCredential.user?.uid);
           setLoadingMessage('Login successful!');
           router.push('/'); 
 
@@ -503,12 +503,12 @@ const AuthPage = ({}: AuthPageProps) => {
      }
     setLoading(true);
     setLoadingMessage('Sending password reset email...');
-    console.log("AuthPage: Attempting to send password reset email to:", email);
+    //console.log("AuthPage: Attempting to send password reset email to:", email);
 
     try {
-      console.log("AuthPage: Calling sendPasswordResetEmail...");
+      //console.log("AuthPage: Calling sendPasswordResetEmail...");
       await sendPasswordResetEmail(auth, email);
-      console.log("AuthPage: Password reset email sent successfully to:", email);
+      //console.log("AuthPage: Password reset email sent successfully to:", email);
       setSuccessMessage(
         `Password reset email sent to ${email}. Please check your inbox (and spam folder).`
       );

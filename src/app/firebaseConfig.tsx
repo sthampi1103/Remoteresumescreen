@@ -64,9 +64,9 @@ try {
 
     // Initialize App Check with ReCaptcha Enterprise
     const recaptchaEnterpriseSiteKey = process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
-    console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey ? "Provided" : "MISSING/EMPTY");
+    //console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey ? "Provided" : "MISSING/EMPTY");
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
-    console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN:", debugToken ? "Provided" : "MISSING/EMPTY");
+    //console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN:", debugToken ? "Provided" : "MISSING/EMPTY");
 
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') {
         console.log("FirebaseConfig: Attempting to initialize Firebase App Check with ReCaptcha Enterprise...");
