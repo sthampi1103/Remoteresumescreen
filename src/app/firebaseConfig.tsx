@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp, getApps } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check"; // Updated import
@@ -62,6 +63,8 @@ try {
 
     // Initialize App Check with ReCaptcha Enterprise
     const recaptchaEnterpriseSiteKey = process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
+    // Log the site key for debugging
+    console.log("NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey);
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
 
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') { // Added trim check & authInitialized
