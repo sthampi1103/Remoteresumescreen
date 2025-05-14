@@ -14,8 +14,6 @@ import {
   UserCredential,
   createUserWithEmailAndPassword,
   MultiFactorResolver,
-  // To set custom claims, you typically use the Firebase Admin SDK on a backend.
-  // For client-side demonstration, we'll just capture the tenantId.
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { appInitialized, auth, authInitialized, appCheckInitialized } from '@/app/firebaseConfig';
@@ -23,14 +21,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Icons } from '@/components/icons';
-import { Label } from '@/components/ui/label'; // Added for Tenant ID label
+import { Label } from '@/components/ui/label';
 
 type AuthPageProps = {};
 
 const AuthPage = ({}: AuthPageProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tenantId, setTenantId] = useState(''); // Added for multi-tenancy
+  const [tenantId, setTenantId] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,31 +58,30 @@ const AuthPage = ({}: AuthPageProps) => {
 
   useEffect(() => {
     if (!appInitialized) {
-      setError("Firebase core components are not yet initialized. Please wait or refresh.");
+      setError("Firebase core components are not yet initialized. Please wait or refresh. Inputs may be disabled.");
       return;
     }
-    if (!authInitialized && appInitialized) { 
-      setError("Firebase Authentication is initializing. Please wait. If this persists, check your Firebase setup and console for errors related to 'auth'.");
+    if (!authInitialized && appInitialized) {
+      setError("Firebase Authentication is initializing. Please wait. If this persists, check your Firebase setup and console for errors related to 'auth'. Inputs may be disabled.");
     }
 
     const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
 
-    if (authInitialized && siteKeyProvided && !appCheckInitialized && !error) {
+    // If App Check fails to initialize and a site key is provided, this is a critical error for functionality.
+    // Removed `&& !error` to ensure this message is prioritized if appCheckInitialized is false.
+    if (authInitialized && siteKeyProvided && !appCheckInitialized) {
       setError(
-        "App Check Security Alert: Initialization failed even though a site key is provided. Key app functionalities (like login, signup, and AI features) will be disabled or will not work correctly. " +
+        "App Check Security Alert: Initialization failed even though a site key is provided. Key app functionalities (like login, signup, and AI features) will be disabled or will not work correctly. Inputs are disabled. " +
         "Please check the browser console for detailed error messages (e.g., 'appCheck/recaptcha-error', 'appCheck/fetch-status-error' or debug token issues). " +
         "Verify your reCAPTCHA Enterprise setup in Google Cloud & Firebase project settings (ensure domain is authorized, API is enabled, and site key is correct)."
       );
-    } else if (authInitialized && !siteKeyProvided && !appCheckInitialized && !error) { 
-       // console.warn(
-       //   "AuthPage: App Check Security Notice - App Check is not configured as NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY is missing. While authentication might work, backend resources could be unprotected. It's highly recommended to set up App Check for production."
-       // );
+    } else if (authInitialized && !siteKeyProvided && !appCheckInitialized && !error) {
+       // console.warn("AuthPage: App Check Security Notice - App Check is not configured as NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY is missing. While authentication might work, backend resources could be unprotected. It's highly recommended to set up App Check for production.");
     }
-  }, [appInitialized, authInitialized, appCheckInitialized, error]);
+  }, [appInitialized, authInitialized, appCheckInitialized, error]); // 'error' is in dependency array, so this runs if error changes
 
 
    useEffect(() => {
-    // Skip reCAPTCHA setup in non-production environments to avoid MFA UI interaction
     if (process.env.NODE_ENV !== 'production') {
       if (recaptchaVerifier) {
         recaptchaVerifier.clear();
@@ -94,7 +91,6 @@ const AuthPage = ({}: AuthPageProps) => {
         }
         setRecaptchaWidgetId(null);
       }
-      // console.warn("AuthPage: Skipping reCAPTCHA setup for MFA in non-production environment.");
       return;
     }
 
@@ -126,11 +122,8 @@ const AuthPage = ({}: AuthPageProps) => {
            recaptchaContainerRef.current, 
            {
              size: 'invisible',
-             callback: (response: any) => {
-                // reCAPTCHA (for MFA) verified automatically
-             },
+             callback: (response: any) => {},
              'expired-callback': () => {
-               // console.warn("AuthPage: reCAPTCHA (for MFA) expired, need to re-verify.");
                 setError("reCAPTCHA challenge expired. Please try the action again.");
                 setIsSendingMfaCode(false);
                 setLoadingMessage(null);
@@ -142,13 +135,9 @@ const AuthPage = ({}: AuthPageProps) => {
          instanceForThisEffect.render().then((widgetId) => {
             if (widgetId !== undefined && widgetId !== null) { 
                  setRecaptchaWidgetId(widgetId);
-            } else {
-                 // console.warn("AuthPage: reCAPTCHA (for MFA) rendered but returned undefined or null widget ID.");
             }
          }).catch(renderError => {
-             // console.error("AuthPage: reCAPTCHA (for MFA) render error:", renderError);
             if (renderError.message && renderError.message.includes('already rendered')) {
-                 // console.warn("AuthPage: reCAPTCHA (for MFA) was likely already rendered in the container. This usually means the container wasn't properly cleared or multiple instances are being created.");
             } else if (renderError.message && renderError.message.toLowerCase().includes('recaptcha') || renderError.code === 'auth/network-request-failed') {
                  setError(`Failed to render reCAPTCHA for MFA (Error: ${renderError.code || 'unknown'}). This is often due to configuration issues or network problems. Please check: 1. Your domain ('${typeof window !== 'undefined' ? window.location.hostname : ''}') is authorized for reCAPTCHA in Google Cloud. 2. The reCAPTCHA API is enabled. 3. Network connectivity to Google services (e.g., www.google.com/recaptcha, www.gstatic.com/recaptcha). Ensure no firewall, VPN, or ad-blocker is interfering. Detailed error: ${renderError.message}`);
             } else {
@@ -157,7 +146,6 @@ const AuthPage = ({}: AuthPageProps) => {
          });
 
       } catch (creationError: any) {
-          // console.error("AuthPage: Error creating RecaptchaVerifier instance (for MFA):", creationError.code, creationError.message, creationError);
           instanceForThisEffect = null; 
           setRecaptchaVerifier(null); 
           if (creationError.code === 'auth/network-request-failed') {
@@ -182,7 +170,7 @@ const AuthPage = ({}: AuthPageProps) => {
          }
          setRecaptchaWidgetId(null);
      };
-   }, [appInitialized, authInitialized, auth, recaptchaVerifier]); // Removed recaptchaWidgetId from dependencies as setRecaptchaWidgetId is stable
+   }, [appInitialized, authInitialized, auth, recaptchaVerifier]);
 
   const handleLoginSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -197,7 +185,6 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
      if (siteKeyProvided && !appCheckInitialized) { 
-       // console.warn("AuthPage: App Check not initialized. Authentication might fail if App Check is enforced by backend.");
        setError("App Check is not ready. Login cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
        return;
      }
@@ -211,11 +198,9 @@ const AuthPage = ({}: AuthPageProps) => {
     } catch (err: any) {
       setLoadingMessage(null);
       if (err instanceof FirebaseError) {
-          // console.error("AuthPage: Login error (FirebaseError):", err.code, err.message);
 
           if (err.code === 'auth/multi-factor-auth-required') {
               if (process.env.NODE_ENV !== 'production') {
-                  // console.warn("AuthPage: MFA is required by Firebase for this account. In a production environment, you would be prompted for a second factor. This prompt is skipped in non-production environments. User is NOT fully logged in.");
                   setError("MFA is required for this account. The MFA prompt is skipped in this non-production environment, and you will not be fully logged in. Configure your Firebase project or user settings if MFA is not desired for development/testing.");
               } else {
                   setError(null);
@@ -229,22 +214,17 @@ const AuthPage = ({}: AuthPageProps) => {
                          setMfaHints(phoneHints);
                          setIsMFAPrompt(true);
                        } else {
-                          // console.error("AuthPage: MFA required but getMultiFactorResolver returned null or undefined.");
                           setError("Multi-factor authentication setup seems incomplete. Please try again or contact support.");
                        }
                   } catch (resolverError: any) {
-                       // console.error("AuthPage: Error getting MFA resolver:", resolverError.code, resolverError.message, resolverError);
                        setError("Failed to process multi-factor authentication requirement.");
                   }
               }
           } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
-              // console.warn("AuthPage: Login failed due to invalid credentials:", err.code);
               setError('Invalid credentials. Please check your email and password.');
           } else if (err.code === 'auth/network-request-failed') {
-              // console.error("AuthPage: Login failed due to a network error (auth/network-request-failed):", err.code, err.message);
               setError('Login failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
           } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
-                // console.error(`AuthPage: App Check/reCAPTCHA Error during login (${err.code}):`, err.message);
                 let userFriendlyMessage = `Authentication failed due to a security check (${err.code}). `;
                 if (err.code.includes('recaptcha-error')) { 
                     userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (e.g., invalid key, domain not authorized in Google Cloud, reCAPTCHA Enterprise API not enabled, reCAPTCHA script blocked by network/firewall) or your network connection. Please try again or contact support. Check the browser console for more Firebase hints, especially logs from 'firebaseConfig.tsx'.";
@@ -263,7 +243,6 @@ const AuthPage = ({}: AuthPageProps) => {
               setError(`Login failed: ${err.message} (Code: ${err.code}). Please try again or contact support if the issue persists.`);
           }
       } else {
-        // console.error("AuthPage: An unexpected error occurred during login:", err);
         setError('An unexpected error occurred during login. Please try again.');
       }
     } finally {
@@ -284,7 +263,6 @@ const AuthPage = ({}: AuthPageProps) => {
     }
     const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
      if (siteKeyProvided && !appCheckInitialized) {
-       // console.warn("AuthPage: App Check not initialized. Sign-up might fail if App Check is enforced by backend.");
         setError("App Check is not ready. Sign up cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
         return;
      }
@@ -293,28 +271,17 @@ const AuthPage = ({}: AuthPageProps) => {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // In a real multi-tenant app, after successful user creation:
-      // 1. You would typically store the tenantId along with the user's UID in Firestore.
-      //    Example: db.collection('users').doc(userCredential.user.uid).set({ email: userCredential.user.email, tenantId: tenantId });
-      // 2. And/Or, use a Firebase Cloud Function (triggered on user creation or called from client)
-      //    to set custom claims on the user, including the tenantId.
-      //    Example (Admin SDK in a Cloud Function): admin.auth().setCustomUserClaims(userCredential.user.uid, { tenantId: tenantId });
-      //    This makes tenantId available in the ID token on the client.
-      // For this demo, we are just capturing tenantId in the UI.
       if (tenantId.trim() !== '') {
-        // console.log("AuthPage: Conceptual Tenant ID for new user:", tenantId, "User UID:", userCredential.user.uid);
-        // This is where you'd implement logic to associate tenantId with the user.
       }
 
       setIsSignUp(false);
       setSuccessMessage('Account created successfully! Please log in.');
       setEmail('');
       setPassword('');
-      setTenantId(''); // Clear tenant ID field
+      setTenantId('');
     } catch (err: any) {
       setLoadingMessage(null);
         if (err instanceof FirebaseError) {
-            // console.error("AuthPage: Sign up error:", err.code, err.message);
             if (err.code === 'auth/email-already-in-use') {
                 setError('This email address is already registered. Please log in or use a different email.');
             } else if (err.code === 'auth/weak-password') {
@@ -322,10 +289,8 @@ const AuthPage = ({}: AuthPageProps) => {
             } else if (err.code === 'auth/invalid-email') {
                 setError('Invalid email address format.');
             } else if (err.code === 'auth/network-request-failed') {
-                // console.error("AuthPage: Sign up failed due to a network error (auth/network-request-failed):", err.code, err.message);
                  setError('Sign up failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
             } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
-                 // console.error(`AuthPage: App Check/reCAPTCHA Error during sign up (${err.code}):`, err.message);
                  let userFriendlyMessage = `Sign up failed due to a security check (${err.code}). `;
                  if (err.code.includes('recaptcha-error')) {
                     userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (e.g., invalid key, domain not authorized, API not enabled, reCAPTCHA script blocked by network/firewall) or your network. Please try again or contact support. Check browser console for Firebase hints from 'firebaseConfig.tsx'.";
@@ -344,7 +309,6 @@ const AuthPage = ({}: AuthPageProps) => {
                 setError(`Sign up failed: ${err.message} (Code: ${err.code}). Please try again or contact support if the issue persists.`);
             }
         } else {
-            // console.error("AuthPage: An unexpected error occurred during sign up:", err);
             setError('An unexpected error occurred during sign up. Please try again.');
         }
     } finally {
@@ -355,23 +319,19 @@ const AuthPage = ({}: AuthPageProps) => {
   const handleSendMfaCode = async () => {
       if (process.env.NODE_ENV !== 'production') {
           setError("MFA code sending is disabled in non-production environments.");
-          // console.warn("AuthPage: Attempted to send MFA code in non-production environment. Aborting.");
           return;
       }
 
       if (!selectedMfaHint || !mfaResolver) {
           setError("Could not initiate MFA verification. Select a phone number and try again.");
-          // console.error("AuthPage: Cannot send MFA code, selectedMfaHint or mfaResolver is missing.", {selectedMfaHint, mfaResolver});
           return;
       }
       if (!recaptchaVerifier) { 
            setError("reCAPTCHA verifier (for MFA) is not ready. Please wait and try again. If this persists, ensure the reCAPTCHA container is visible and there are no console errors related to its rendering (e.g., network blocks to www.google.com/recaptcha or www.gstatic.com/recaptcha). Check Firebase/GCP console for domain authorization & API settings for reCAPTCHA.");
-           // console.error("AuthPage: Cannot send MFA code, recaptchaVerifier (for MFA) is null or not rendered. RecaptchaVerifier:", recaptchaVerifier);
            return;
       }
        const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
        if (siteKeyProvided && !appCheckInitialized) {
-         // console.warn("AuthPage: App Check not initialized. Sending MFA code might fail if App Check is enforced by backend.");
          setError("App Check is not ready. MFA code sending cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key) and check console for 'appCheck/recaptcha-error' from 'firebaseConfig.tsx'.");
          return;
        }
@@ -393,13 +353,10 @@ const AuthPage = ({}: AuthPageProps) => {
            setLoadingMessage('Verification code sent. Enter the code below.');
 
       } catch (err: any) {
-          // console.error("AuthPage: Error sending MFA code:", err.code, err.message, err);
           if (err instanceof FirebaseError) {
               if (err.code === 'auth/network-request-failed') {
-                   // console.error("AuthPage: Sending MFA code failed due to a network error (auth/network-request-failed):", err.code, err.message);
                    setError('Failed to send verification code due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com, and www.google.com/recaptcha. 5. Visit status.firebase.google.com for service outages. App Check/reCAPTCHA loading failures can also cause this.');
               } else if (err.code.includes('recaptcha') || err.code.includes('app-check') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
-                   // console.error(`AuthPage: App Check/reCAPTCHA Error during MFA code sending (${err.code}):`, err.message);
                    let userFriendlyMessage = `Failed to send verification code due to a security check (${err.code}). `;
                      if (err.code.includes('recaptcha-error')) {
                          userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (e.g., invalid key, domain not authorized, API not enabled, reCAPTCHA container not rendered, reCAPTCHA script blocked by network/firewall) or your network. Please try again or contact support. Check browser console for Firebase hints (from 'firebaseConfig.tsx' if App Check is involved).";
@@ -420,15 +377,14 @@ const AuthPage = ({}: AuthPageProps) => {
                    setError("Too many verification code requests. Please wait a while before trying again.");
               } else if (err.code === 'auth/code-expired' || err.message.toLowerCase().includes('recaptcha check already in progress') || err.code === 'auth/missing-phone-number' ) { 
                    setError("Verification attempt failed. This could be due to an expired reCAPTCHA, a reCAPTCHA check already in progress, or a missing phone number. Please try sending the code again.");
-                   // console.warn("AuthPage: MFA send code failed with 'code-expired' or similar, resetting reCAPTCHA and relevant states for retry.");
                    if (recaptchaVerifier && process.env.NODE_ENV === 'production') {
                        recaptchaVerifier.clear();
-                       setRecaptchaVerifier(null); // Should trigger re-init via useEffect
+                       setRecaptchaVerifier(null); 
                        if (recaptchaContainerRef.current) recaptchaContainerRef.current.innerHTML = '';
                        setRecaptchaWidgetId(null);
                    }
-                   setSelectedMfaHint(null); // Allow re-selection of hint
-                   setMfaVerificationId(null); // Clear previous verification ID
+                   setSelectedMfaHint(null); 
+                   setMfaVerificationId(null); 
               } else {
                    setError(`Failed to send verification code: ${err.message} (Code: ${err.code}). Please try again or contact support.`);
               }
@@ -440,14 +396,10 @@ const AuthPage = ({}: AuthPageProps) => {
           setIsSendingMfaCode(false);
            // @ts-ignore
            if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && window.grecaptcha && recaptchaWidgetId !== null && typeof window.grecaptcha.reset === 'function') {
-               try {
-                  // @ts-ignore
+               try { // @ts-ignore
                    window.grecaptcha.reset(recaptchaWidgetId);
                } catch (e) {
-                   // console.warn("AuthPage: Could not reset reCAPTCHA widget (for MFA) after sending MFA code:", e);
                }
-           } else {
-               // No active reCAPTCHA widget (for MFA) to reset or reset function unavailable (or in non-prod).
            }
       }
   };
@@ -456,18 +408,15 @@ const AuthPage = ({}: AuthPageProps) => {
   const handleVerifyMfaCode = async () => {
       if (process.env.NODE_ENV !== 'production') {
         setError("MFA code verification is disabled in non-production environments.");
-        // console.warn("AuthPage: Attempted to verify MFA code in non-production environment. Aborting.");
         return;
       }
 
       if (!mfaVerificationCode || !mfaResolver || !mfaVerificationId) {
           setError("Missing information to verify the code. Please request a new code and try again.");
-          // console.error("AuthPage: Cannot verify MFA code, missing required info.", {mfaVerificationCode, mfaResolver, mfaVerificationId});
           return;
       }
       const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
       if (siteKeyProvided && !appCheckInitialized) {
-        // console.warn("AuthPage: App Check not initialized. Verifying MFA code might fail if App Check is enforced by backend.");
         setError("App Check is not ready. MFA code verification cannot proceed. Please wait a moment and try again. Verify Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key) and check console for 'appCheck/recaptcha-error' from 'firebaseConfig.tsx'.");
         return;
       }
@@ -486,7 +435,6 @@ const AuthPage = ({}: AuthPageProps) => {
           router.push('/'); 
 
       } catch (err: any) {
-          // console.error("AuthPage: Error verifying MFA code:", err.code, err.message, err);
            if (err instanceof FirebaseError) {
                 if (err.code === 'auth/invalid-verification-code') {
                    setError("Invalid verification code. Please try again.");
@@ -502,7 +450,6 @@ const AuthPage = ({}: AuthPageProps) => {
                             try { // @ts-ignore
                                 window.grecaptcha.reset(recaptchaWidgetId);
                             } catch (e) { 
-                              // console.warn("AuthPage: Could not reset reCAPTCHA widget (for MFA) after code expired error:", e);
                             }
                         }
                         recaptchaVerifier.clear();
@@ -511,10 +458,8 @@ const AuthPage = ({}: AuthPageProps) => {
                         setRecaptchaWidgetId(null);
                      }
                 } else if (err.code === 'auth/network-request-failed') {
-                     // console.error("AuthPage: MFA code verification failed due to a network error (auth/network-request-failed):", err.code, err.message);
                      setError('MFA verification failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com. 5. Visit status.firebase.google.com.');
                 } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
-                    // console.error(`AuthPage: App Check/reCAPTCHA Error during MFA verification (${err.code}):`, err.message);
                     let userFriendlyMessage = `MFA verification failed due to a security check (${err.code}). `;
                       if (err.code.includes('recaptcha-error')) {
                           userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (e.g., invalid key, domain not authorized, API not enabled, reCAPTCHA script blocked by network/firewall) or your network. Please try again or contact support. Check browser console for Firebase hints from 'firebaseConfig.tsx'.";
@@ -554,7 +499,6 @@ const AuthPage = ({}: AuthPageProps) => {
     }
      const siteKeyProvided = !!process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
      if (siteKeyProvided && !appCheckInitialized) {
-       // console.warn("AuthPage: App Check not initialized. Password reset might fail if App Check is enforced by backend.");
        setError("App Check is not ready. Password reset cannot proceed. Please wait a moment and try again. If the problem persists, check the browser console for 'appCheck/recaptcha-error' or debug token issues, and verify your Firebase/Google Cloud App Check configuration (domain authorization, API enabled, correct site key).");
        return;
      }
@@ -571,16 +515,13 @@ const AuthPage = ({}: AuthPageProps) => {
     } catch (err: any) {
        setLoadingMessage(null);
        if (err instanceof FirebaseError) {
-           // console.error("AuthPage: Password Reset Error:", err.code, err.message);
            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
                setError(
                    'Email address not found or is invalid. Please enter a registered email address.'
                );
            } else if (err.code === 'auth/network-request-failed') {
-                // console.error("AuthPage: Password reset failed due to a network error (auth/network-request-failed):", err.code, err.message);
                 setError('Password reset failed due to a network issue. Please check: 1. Your internet connection. 2. Any firewall, VPN, or proxy settings that might be blocking Google/Firebase services. 3. Browser extensions (like ad-blockers) that could interfere. 4. If you can access google.com, gstatic.com, googleapis.com, firebaseappcheck.googleapis.com. 5. Visit status.firebase.google.com for service outages.');
            } else if (err.code.includes('app-check') || err.code.includes('recaptcha') || err.code.includes('token-is-invalid') || err.code.includes('app-not-authorized')) {
-               // console.error(`AuthPage: App Check/reCAPTCHA Error during password reset (${err.code}):`, err.message);
                 let userFriendlyMessage = `Password reset failed due to a security check (${err.code}). `;
                  if (err.code.includes('recaptcha-error')) {
                      userFriendlyMessage += "There might be an issue with the reCAPTCHA setup (e.g., invalid key, domain not authorized, API not enabled, reCAPTCHA script blocked by network/firewall) or your network. Please try again or contact support. Check browser console for Firebase hints from 'firebaseConfig.tsx'.";
@@ -601,7 +542,6 @@ const AuthPage = ({}: AuthPageProps) => {
                );
            }
        } else {
-           // console.error("AuthPage: An unexpected error occurred during password reset:", err);
             setError(`An unexpected error occurred during password reset (${err.message}). Please try again.`);
        }
     } finally {
@@ -614,7 +554,7 @@ const AuthPage = ({}: AuthPageProps) => {
     setSuccessMessage(null);
     setEmail('');
     setPassword('');
-    setTenantId(''); // Reset tenant ID
+    setTenantId('');
     setIsMFAPrompt(false);
     setMfaResolver(null);
     setMfaHints([]);
@@ -663,7 +603,7 @@ const AuthPage = ({}: AuthPageProps) => {
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Icons.alertCircle className="h-4 w-4" />
-            <AlertTitle>{isSignUp ? 'Sign Up Error' : isForgotPassword ? 'Reset Password Error' : isMFAPrompt ? 'MFA Error' : error.toLowerCase().includes("app check") || error.toLowerCase().includes("security alert") ? 'Security/Initialization Error' : 'Login Error'}</AlertTitle>
+            <AlertTitle>{isSignUp ? 'Sign Up Error' : isForgotPassword ? 'Reset Password Error' : isMFAPrompt ? 'MFA Error' : error.toLowerCase().includes("app check") || error.toLowerCase().includes("security alert") || error.toLowerCase().includes("core components") || error.toLowerCase().includes("authentication is initializing") ? 'Security/Initialization Error' : 'Login Error'}</AlertTitle>
             <AlertDescription suppressHydrationWarning={true}>{error}</AlertDescription>
           </Alert>
         )}
@@ -737,7 +677,6 @@ const AuthPage = ({}: AuthPageProps) => {
                     onChange={(e) => setPassword(e.target.value)} required disabled={isAuthSystemDisabled} suppressHydrationWarning={true}
                   />
               </div>
-               {/* Tenant ID input - for conceptual multi-tenancy */}
                <div className="mb-6">
                   <Label className="block text-sm font-medium mb-2" htmlFor="tenant-id-signup">
                     Tenant ID (Optional for Demo)
@@ -885,10 +824,9 @@ const AuthPage = ({}: AuthPageProps) => {
                                     setMfaVerificationCode('');
                                     setError(null);
                                     setLoadingMessage(null);
-                                    // Attempt to reset reCAPTCHA if it exists and in prod
                                     if (recaptchaVerifier && process.env.NODE_ENV === 'production') {
                                       recaptchaVerifier.clear();
-                                      setRecaptchaVerifier(null); // This should trigger re-initialization by useEffect
+                                      setRecaptchaVerifier(null); 
                                       if (recaptchaContainerRef.current) recaptchaContainerRef.current.innerHTML = '';
                                       setRecaptchaWidgetId(null);
                                     }
