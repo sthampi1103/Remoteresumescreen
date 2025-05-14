@@ -69,12 +69,7 @@ try {
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') {
         
        if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production' && debugToken) {
-           // (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
-           // The above line is commented out to prevent the Firebase SDK from logging the debug token.
-           // WARNING: This will likely cause App Check to FAIL in local development if enforcement is on,
-           // as the SDK will not automatically use the debug token.
-           // The SDK logs the token message when it's set this way and used.
-           // console.log("FirebaseConfig: Attempted to set FIREBASE_APPCHECK_DEBUG_TOKEN (but it's now commented out to suppress SDK logging). Local App Check may fail.");
+           (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
        } else if (process.env.NODE_ENV !== 'production' && !debugToken) {
            console.warn(
             "FirebaseConfig: Local Dev Hint - NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN not found. If App Check is enforced and 'localhost' isn't fully whitelisted for your reCAPTCHA key in Google Cloud, App Check may fail. Consider generating and setting a debug token."
