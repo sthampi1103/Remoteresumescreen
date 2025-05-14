@@ -16,10 +16,10 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Icons} from '@/components/icons';
 import {useToast} from '@/hooks/use-toast';
 import { Toaster } from "@/components/ui/toaster";
-import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig';
-import { signOut } from 'firebase/auth';
+import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig'; // Import appCheckInitialized, auth, authInitialized
+import { signOut, getIdTokenResult } from 'firebase/auth'; // Import signOut and getIdTokenResult
 import { rankResumes, RankResumesOutput } from '@/ai/flows/rank-resumes';
-import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions';
+import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions'; // Import updated flow
 import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
@@ -40,6 +40,7 @@ export default function Home() {
   const [isJDValid, setIsJDValid] = useState(false);
   const [areResumesValid, setAreResumesValid] = useState(false);
   const [activeTab, setActiveTab] = useState("results");
+  const [tenantId, setTenantId] = useState<string | null>(null); // Added for multi-tenancy
 
   const router = useRouter();
   const {toast} = useToast();
@@ -76,14 +77,42 @@ export default function Home() {
         duration: Infinity,
       });
     } else if (authInitialized && !siteKeyProvided && !appCheckInitialized) {
+        // console.warn("HomePage: App Check not configured (no site key). AI features may be unprotected if App Check is not enforced.");
     }
 
 
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (!user) {
-         router.push('/auth');
+    const unsubscribe = auth.onAuthStateChanged(async (user) => { // Make async for custom claims
+      if (user) {
+        try {
+          const idTokenResult = await user.getIdTokenResult(true); // Force refresh to get latest claims
+          const currentTenantId = idTokenResult.claims.tenantId as string | undefined; // Access custom claim
+
+          if (currentTenantId) {
+            setTenantId(currentTenantId);
+            // console.log("HomePage: User tenant ID:", currentTenantId);
+            // You would use this tenantId when saving or fetching data from Firestore.
+            // For example:
+            // const userDocRef = doc(db, `tenants/${currentTenantId}/users/${user.uid}`);
+            // Or when querying:
+            // const q = query(collection(db, "jobDescriptions"), where("tenantId", "==", currentTenantId));
+          } else {
+            // Handle cases where tenantId is not present in claims.
+            // This might mean the user isn't fully set up for multi-tenancy,
+            // or custom claims haven't been set.
+            // For now, we'll allow operation but log a warning.
+            // In a strict multi-tenant app, you might redirect or show an error.
+            // console.warn("HomePage: No tenantId found in user's custom claims.");
+            // setTenantId(null); // Explicitly set to null if not found
+          }
+        } catch (err) {
+            // console.error("HomePage: Error fetching user custom claims:", err);
+            // setError("Could not verify tenant association. Some functionalities might be affected.");
+            // setTenantId(null);
+        }
       } else {
-         // User is authenticated
+         // console.log("HomePage: No authenticated user found, redirecting to /auth.");
+         router.push('/auth');
+         setTenantId(null); // Clear tenantId if user logs out
       }
     });
     return () => unsubscribe();
@@ -138,6 +167,10 @@ export default function Home() {
       });
       return;
     }
+
+    // For multi-tenancy, if results were saved, you'd include tenantId here.
+    // console.log("HomePage: Starting analysis for tenant:", tenantId || "default/unspecified");
+
     setLoading(true);
     setError(null);
     setResults([]);
@@ -166,6 +199,10 @@ export default function Home() {
           });
           return;
       }
+
+      // For multi-tenancy, if Q&A were saved, you'd include tenantId here.
+      // console.log("HomePage: Generating Q&A for tenant:", tenantId || "default/unspecified", "using JD:", jobDescription.substring(0,50) + "...");
+
       setIsGeneratingQnA(true);
       setQnAGenerationError(null);
       setInterviewQnA([]);
@@ -228,16 +265,18 @@ export default function Home() {
     try {
       await signOut(auth);
       toast({ title: "Signed Out", description: "You have been successfully signed out.", variant: "default" });
-      router.push('/auth');
+      router.push('/auth'); 
     } catch (error: any) {
-      console.error("HomePage: Sign out error:", error.code, error.message, error);
+      // console.error("HomePage: Sign out error:", error.code, error.message, error);
        toast({ title: "Sign Out Error", description: `Failed to sign out: ${error.message}`, variant: "destructive" });
     }
   };
 
   const handleClearComplete = useCallback((type: 'jd' | 'resumes') => {
     if (type === 'jd') {
+        // Optional: console.log("JobDescriptionInput cleared");
     } else if (type === 'resumes') {
+        // Optional: console.log("ResumeUpload cleared");
     }
   }, []);
 
@@ -250,6 +289,9 @@ export default function Home() {
         });
         return;
     }
+
+    // If results were tenant-specific and fetched from a DB, this export would be for the current tenant's data.
+    // console.log("HomePage: Downloading Excel for tenant:", tenantId || "default/unspecified");
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Resume Ranking');
@@ -346,6 +388,9 @@ export default function Home() {
          return;
      }
 
+    // If Q&A were tenant-specific and fetched from a DB, this export would be for the current tenant's data.
+    // console.log("HomePage: Downloading Q&A PDF for tenant:", tenantId || "default/unspecified");
+
      const doc = new jsPDF();
      doc.setFontSize(16);
      doc.text("Interview Questions & Answers", 10, 10);
@@ -401,6 +446,8 @@ export default function Home() {
         return;
       }
 
+      // console.log("HomePage: Fetching AI analysis results for tenant:", tenantId || "default/unspecified");
+
       setLoading(true);
       setError(null);
       setResults([]);
@@ -441,7 +488,7 @@ export default function Home() {
         fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations]);
+  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations, tenantId]); // Added tenantId to dependency array, though it's primarily for logging/future use here
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -488,6 +535,7 @@ export default function Home() {
             />
         </svg>
         <h1 className="text-xl sm:text-2xl font-bold mt-2">ResumeRanker</h1>
+         {tenantId && <p className="text-xs mt-1">Tenant: {tenantId}</p>}
       </header>
 
       <main className="container mx-auto p-4 flex-grow">
