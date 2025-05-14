@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth'; // Only signOut is needed from firebase/auth
 import { useEffect } from 'react';
 import { auth, authInitialized } from '../firebaseConfig'; // Import auth and authInitialized
+import { Icons } from '@/components/icons'; // Added import for Icons
 
 const Dashboard = () => {
   const router = useRouter();
