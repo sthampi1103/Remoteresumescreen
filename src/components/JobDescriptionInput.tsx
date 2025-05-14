@@ -2,7 +2,7 @@
 
 import {useState, useRef, useEffect, useCallback} from 'react';
 import {Button} from '@/components/ui/button';
-import {Textarea} from '@/components/ui/textarea';
+import {Textarea}from '@/components/ui/textarea';
 import {Input} from '@/components/ui/input';
 import {useToast} from '@/hooks/use-toast';
 import {Icons} from "@/components/icons";
@@ -127,7 +127,7 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
       reader.onload = event => {
         if (event.target && typeof event.target.result === 'string') {
           const content = event.target.result;
-          if (content.includes('�') && file.type !== 'text/plain') {
+          if (content.includes('') && file.type !== 'text/plain') {
              console.warn(`File "${file.name}" might contain unreadable characters.`);
           }
           if (content.trim() === '') {
@@ -149,7 +149,6 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
       };
 
        reader.onabort = () => {
-         console.log(`File reading aborted for "${file.name}"`);
          reject(new Error(`File reading aborted for "${file.name}"`));
        };
 

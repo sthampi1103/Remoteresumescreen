@@ -123,7 +123,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesChange, clear, onC
                      resolve(""); // Resolve with empty string for empty files
                    } else {
                      // Basic check for common unreadable characters (can be improved)
-                     if (event.target.result.includes('�')) {
+                     if (event.target.result.includes('')) {
                         console.warn(`File "${file.name}" might contain unreadable characters.`);
                         // Optionally show toast or reject here if strict text is needed
                      }

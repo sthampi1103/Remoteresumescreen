@@ -24,7 +24,6 @@ let auth: Auth | undefined;
 let authInitialized = false;
 
 try {
-  console.log("FirebaseConfig: Attempting to initialize Firebase...");
   // Basic check for essential config keys
    const requiredKeys = ['apiKey', 'authDomain', 'projectId'];
    const missingKeys = requiredKeys.filter(key => !(firebaseConfig as any)[key]);
@@ -38,21 +37,17 @@ try {
       appCheckInitialized = false;
   } else {
     if (!getApps().length) {
-        console.log("FirebaseConfig: Initializing new Firebase app instance.");
         app = initializeApp(firebaseConfig);
     } else {
-        console.log("FirebaseConfig: Using existing Firebase app instance.");
         app = getApps()[0];
     }
     appInitialized = true;
-    console.log("FirebaseConfig: Firebase core app initialized successfully.");
 
     // Initialize Firebase Auth
     if (app) {
         try {
             auth = getAuth(app);
             authInitialized = true;
-            console.log("FirebaseConfig: Firebase Auth initialized successfully.");
         } catch (e: any) {
             console.error("FirebaseConfig: Firebase Auth initialization FAILED:", e.code, e.message, e);
             authInitialized = false;
@@ -64,15 +59,11 @@ try {
 
     // Initialize App Check with ReCaptcha Enterprise
     const recaptchaEnterpriseSiteKey = process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
-    //console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey ? "Provided" : "MISSING/EMPTY");
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
-    //console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN:", debugToken ? "Provided" : "MISSING/EMPTY");
 
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') {
-        console.log("FirebaseConfig: Attempting to initialize Firebase App Check with ReCaptcha Enterprise...");
         
        if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production' && debugToken) {
-           console.log("FirebaseConfig: Setting Firebase App Check debug token for local development:", debugToken);
            (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
        } else if (process.env.NODE_ENV !== 'production' && !debugToken) {
            console.warn(
@@ -82,7 +73,6 @@ try {
 
       try {
           const provider = new ReCaptchaEnterpriseProvider(recaptchaEnterpriseSiteKey);
-          console.log("FirebaseConfig: ReCaptchaEnterpriseProvider instance created.");
 
           initializeAppCheck(app, {
             provider: provider,
@@ -90,7 +80,6 @@ try {
           });
 
           appCheckInitialized = true;
-          console.log("FirebaseConfig: Firebase App Check initialized successfully with ReCaptcha Enterprise provider.");
       } catch (appCheckError: any) {
             console.error("FirebaseConfig: Firebase App Check initialization FAILED:", appCheckError.code, appCheckError.message, appCheckError);
             appCheckInitialized = false;
@@ -160,9 +149,6 @@ try {
     appCheckInitialized = false;
 }
 
-console.log(`FirebaseConfig: Initialization Status - Firebase Core: ${appInitialized}, Firebase Auth: ${authInitialized}, App Check: ${appCheckInitialized}`);
-
-
 if (appInitialized && authInitialized && !appCheckInitialized && process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY) {
     console.error(
         "\n**************************************************************************************************************************************************\n" +
@@ -182,10 +168,5 @@ if (appInitialized && authInitialized && !appCheckInitialized && process.env.NEX
         "**************************************************************************************************************************************************\n"
     );
 }
-
-// Log the value of NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY for debugging purposes
-// This was added based on user request and should be removed after debugging.
-// console.log("Debug: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY is '", process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY, "'");
-
 
 export { app, appInitialized, auth, authInitialized, appCheckInitialized };

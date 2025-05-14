@@ -16,10 +16,10 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Icons} from '@/components/icons';
 import {useToast} from '@/hooks/use-toast';
 import { Toaster } from "@/components/ui/toaster";
-import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig'; 
-import { signOut } from 'firebase/auth'; 
+import { appInitialized, app, auth, appCheckInitialized, authInitialized } from '@/app/firebaseConfig';
+import { signOut } from 'firebase/auth';
 import { rankResumes, RankResumesOutput } from '@/ai/flows/rank-resumes';
-import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions'; 
+import { generateInterviewQnA, GenerateQnAOutput } from '@/ai/flows/generate-interview-questions';
 import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
@@ -46,7 +46,6 @@ export default function Home() {
 
   useEffect(() => {
     if (!appInitialized) {
-       console.error("HomePage: Firebase core components are not yet initialized.");
        toast({
          title: "Initialization Error",
          description: "Core components are not ready. Please refresh or check console.",
@@ -56,7 +55,6 @@ export default function Home() {
       return;
     }
     if (!authInitialized && appInitialized) {
-       console.error("HomePage: Firebase Auth is not initialized.");
        toast({
          title: "Authentication Error",
          description: "Authentication system is not ready. You might be redirected. Check console.",
@@ -64,8 +62,7 @@ export default function Home() {
          duration: Infinity,
        });
     }
-    if (!auth) { 
-       console.error("HomePage: Auth instance not available from firebaseConfig. Redirecting to /auth.");
+    if (!auth) {
        router.push('/auth');
        return;
      }
@@ -78,18 +75,15 @@ export default function Home() {
         variant: "destructive",
         duration: Infinity,
       });
-       console.error("HomePage: App Check Security Alert - App Check failed to initialize despite site key being present.");
     } else if (authInitialized && !siteKeyProvided && !appCheckInitialized) {
-       console.warn("HomePage: App Check Security Notice - App Check is not configured as NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY is missing. AI features might be vulnerable if App Check is not enforced server-side for Genkit flows.");
     }
 
 
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (!user) {
-         console.log("HomePage: No authenticated user found, redirecting to /auth.");
          router.push('/auth');
       } else {
-         console.log("HomePage: User is authenticated:", user.uid);
+         // User is authenticated
       }
     });
     return () => unsubscribe();
@@ -126,7 +120,6 @@ export default function Home() {
   const handleStart = async () => {
     if (!authInitialized || !auth) {
         toast({ title: "Authentication Error", description: "Firebase Auth is not ready. Cannot start analysis.", variant: "destructive" });
-        console.error("handleStart: Auth not ready.");
         return;
     }
     if (siteKeyProvided && !appCheckInitialized) {
@@ -135,7 +128,6 @@ export default function Home() {
         description: "Cannot start analysis: App Check is not initialized. Please resolve configuration issues (see console and verify domain authorization, API enablement, and site key).",
         variant: "destructive",
       });
-      console.error("handleStart: App Check not ready.");
       return;
     }
     if (!isJDValid || !areResumesValid) {
@@ -149,15 +141,13 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResults([]);
-    setIsResultsDisplayed(true); 
-    setActiveTab("results"); 
-  
+    setIsResultsDisplayed(true);
+    setActiveTab("results");
   };
 
    const handleGenerateQnA = async () => {
       if (!authInitialized || !auth) {
           toast({ title: "Authentication Error", description: "Firebase Auth is not ready for Q&A generation.", variant: "destructive" });
-          console.error("handleGenerateQnA: Auth not ready.");
           return;
       }
       if (siteKeyProvided && !appCheckInitialized) {
@@ -166,7 +156,6 @@ export default function Home() {
           description: "Cannot generate Q&A: App Check is not initialized. Please resolve configuration issues (see console and verify domain authorization, API enablement, and site key).",
           variant: "destructive",
         });
-        console.error("handleGenerateQnA: App Check not ready.");
         return;
       }
       if (!isJDValid) {
@@ -180,11 +169,10 @@ export default function Home() {
       setIsGeneratingQnA(true);
       setQnAGenerationError(null);
       setInterviewQnA([]);
-      setShowInterviewQnA(true); 
-      setActiveTab("questions"); 
+      setShowInterviewQnA(true);
+      setActiveTab("questions");
 
       try {
-          console.log("HomePage: Calling generateInterviewQnA AI flow...");
           const output: GenerateQnAOutput = await generateInterviewQnA({ jobDescription });
           setInterviewQnA(output.qna || []);
           if (!output.qna || output.qna.length === 0) {
@@ -194,7 +182,6 @@ export default function Home() {
             toast({ title: "Q&A Generated", description: `Successfully generated ${output.qna.length} Q&A pairs.`, variant: "default" });
           }
       } catch (err: any) {
-          console.error("HomePage: Error generating interview Q&A:", err.code, err.message, err);
           let userMessage = "An error occurred while generating Q&A.";
           if (err.message) {
               if (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error') || err.message.includes('fetch-status-error')) {
@@ -218,7 +205,7 @@ export default function Home() {
     setResumesText('');
     setResults([]);
     setInterviewQnA([]);
-    setIsResetActive(false); 
+    setIsResetActive(false);
     setIsResultsDisplayed(false);
     setShowInterviewQnA(false);
     setLoading(false);
@@ -227,23 +214,21 @@ export default function Home() {
     setQnAGenerationError(null);
     setIsJDValid(false);
     setAreResumesValid(false);
-    setClearJDTrigger(prev => !prev); 
-    setClearResumesTrigger(prev => !prev); 
+    setClearJDTrigger(prev => !prev);
+    setClearResumesTrigger(prev => !prev);
     setActiveTab("results");
     toast({ title: "Inputs Cleared", description: "All inputs and results have been reset.", variant: "default" });
   };
 
   const handleSignOut = async () => {
      if (!authInitialized || !auth) {
-       console.error("HomePage: Auth instance not available for sign out.");
        toast({ title: "Sign Out Error", description: "Could not sign out, Auth not ready.", variant: "destructive" });
        return;
      }
     try {
-      console.log("HomePage: Signing out user...");
       await signOut(auth);
       toast({ title: "Signed Out", description: "You have been successfully signed out.", variant: "default" });
-      router.push('/auth'); 
+      router.push('/auth');
     } catch (error: any) {
       console.error("HomePage: Sign out error:", error.code, error.message, error);
        toast({ title: "Sign Out Error", description: `Failed to sign out: ${error.message}`, variant: "destructive" });
@@ -322,7 +307,7 @@ export default function Home() {
     });
 
     worksheet.columns.forEach(column => {
-        if (column && column.eachCell) { 
+        if (column && column.eachCell) {
             let maxLength = 0;
             column.eachCell({ includeEmpty: true }, cell => {
                 let cellLength = cell.value ? cell.value.toString().length : 0;
@@ -387,8 +372,8 @@ export default function Home() {
 
          doc.setFont(undefined, 'normal');
          doc.setFontSize(10);
-         doc.setTextColor(100); 
-         const answerLines = doc.splitTextToSize(`A: ${item.answer}`, doc.internal.pageSize.width - margin * 2 - 5); 
+         doc.setTextColor(100);
+         const answerLines = doc.splitTextToSize(`A: ${item.answer}`, doc.internal.pageSize.width - margin * 2 - 5);
          const answerHeight = answerLines.length * (doc.getLineHeight() / doc.internal.scaleFactor);
 
           if (yPos + answerHeight > pageHeight - margin) {
@@ -398,7 +383,7 @@ export default function Home() {
 
          doc.text(answerLines, margin + 5, yPos);
          yPos += answerHeight + pairSpacing;
-         doc.setTextColor(0); 
+         doc.setTextColor(0);
      });
 
      doc.save('interview_qna.pdf');
@@ -415,11 +400,10 @@ export default function Home() {
         }
         return;
       }
-      
-      console.log("HomePage: useEffect for fetchData triggered, calling rankResumes AI flow...");
+
       setLoading(true);
       setError(null);
-      setResults([]); 
+      setResults([]);
 
       try {
         const resumesArray = resumesText.split(/\n\s*\n\s*\n/).map(r => r.trim()).filter(text => text !== '');
@@ -435,7 +419,6 @@ export default function Home() {
         setError(null);
         toast({ title: "Analysis Complete", description: `Successfully analyzed ${apiResults.length} resume(s).`, variant: "default" });
       } catch (err: any) {
-        console.error("HomePage: Error ranking resumes:", err.code, err.message, err);
         let userMessage = "An error occurred while analyzing resumes.";
          if (err.message) {
               if (err.message.includes('app-check') || err.message.includes('appCheck/recaptcha-error') || err.message.includes('fetch-status-error')) {
@@ -454,11 +437,11 @@ export default function Home() {
       }
     };
 
-    if (isResultsDisplayed) { 
+    if (isResultsDisplayed) {
         fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations]); 
+  }, [isResultsDisplayed, jobDescription, resumesText, isSystemReadyForOperations]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -526,7 +509,7 @@ export default function Home() {
             </div>
              <Button
                 onClick={handleGenerateQnA}
-                disabled={!isJDValid || isGeneratingQnA || !isSystemReadyForOperations || loading} 
+                disabled={!isJDValid || isGeneratingQnA || !isSystemReadyForOperations || loading}
                 aria-label="Generate interview Q&A based on job description"
                 className="mt-4 print:hidden"
                 suppressHydrationWarning={true}
@@ -578,7 +561,7 @@ export default function Home() {
           <Button
             variant="outline"
             onClick={handleReset}
-            disabled={!isResetActive && !loading && !isGeneratingQnA} 
+            disabled={!isResetActive && !loading && !isGeneratingQnA}
             aria-label="Reset all inputs and results"
             suppressHydrationWarning={true}
              size="lg"
@@ -597,7 +580,7 @@ export default function Home() {
                </TabsList>
                <TabsContent value="results">
                  <h2 id="analysis-results-heading" className="text-xl font-semibold my-4 sr-only">Resume Ranking Results</h2>
-                  {loading && isResultsDisplayed ? ( 
+                  {loading && isResultsDisplayed ? (
                     <Alert>
                       <Icons.loader className="h-4 w-4 animate-spin" />
                       <AlertTitle>Analyzing Resumes</AlertTitle>
@@ -605,7 +588,7 @@ export default function Home() {
                         Please wait while the resumes are being analyzed...
                       </AlertDescription>
                     </Alert>
-                  ) : error && isResultsDisplayed ? ( 
+                  ) : error && isResultsDisplayed ? (
                        <Alert variant="destructive">
                          <Icons.alertCircle className="h-4 w-4" />
                          <AlertTitle>Error Ranking Resumes</AlertTitle>
@@ -627,7 +610,7 @@ export default function Home() {
                           </Button>
                         </div>
                     </>
-                  ) : isResultsDisplayed && !loading ? ( 
+                  ) : isResultsDisplayed && !loading ? (
                     <p className="text-center text-muted-foreground mt-4">No ranking results to display. The AI might not have found matches or there was an issue processing.</p>
                   ): null}
                </TabsContent>
@@ -664,12 +647,12 @@ export default function Home() {
                          </Button>
                        </div>
                      </>
-                   ) : showInterviewQnA && !isGeneratingQnA ? ( 
+                   ) : showInterviewQnA && !isGeneratingQnA ? (
                     <p className="text-center text-muted-foreground mt-4">No interview Q&amp;A to display. The AI might not have generated questions based on the job description.</p>
                    ) : null}
                 </TabsContent>
              </Tabs>
-             
+
              <div className="hidden print:block">
                 {isResultsDisplayed && results.length > 0 && (
                     <div className="mb-8">
