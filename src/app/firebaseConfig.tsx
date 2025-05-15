@@ -23,6 +23,8 @@ let appCheckInitialized = false;
 let auth: Auth | undefined;
 let authInitialized = false;
 
+console.log("FirebaseConfig: Script start. NODE_ENV:", process.env.NODE_ENV);
+
 try {
   // Basic check for essential config keys
    const requiredKeys = ['apiKey', 'authDomain', 'projectId'];
@@ -38,18 +40,20 @@ try {
   } else {
     if (!getApps().length) {
         app = initializeApp(firebaseConfig);
+        console.log("FirebaseConfig: Firebase App initialized (new instance).");
     } else {
         app = getApps()[0];
+        console.log("FirebaseConfig: Firebase App retrieved (existing instance).");
     }
     appInitialized = true;
-    // console.log("FirebaseConfig: Firebase App initialized successfully.");
+    
 
     // Initialize Firebase Auth
     if (app) {
         try {
             auth = getAuth(app);
             authInitialized = true;
-            // console.log("FirebaseConfig: Firebase Auth initialized successfully.");
+            console.log("FirebaseConfig: Firebase Auth initialized successfully.");
         } catch (e: any) {
             console.error("FirebaseConfig: Firebase Auth initialization FAILED:", e.code, e.message, e);
             authInitialized = false;
@@ -61,15 +65,16 @@ try {
 
     // Initialize App Check with ReCaptcha Enterprise
     const recaptchaEnterpriseSiteKey = process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY;
-    // console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY:", recaptchaEnterpriseSiteKey ? "Exists" : "MISSING or EMPTY");
+    console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY value:", recaptchaEnterpriseSiteKey ? `"${recaptchaEnterpriseSiteKey}"` : "MISSING or EMPTY");
     const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
-    // console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN:", debugToken ? "Exists" : "MISSING or EMPTY");
+    console.log("FirebaseConfig: NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN value:", debugToken ? `"${debugToken}" (Note: This is sensitive if not a placeholder)` : "MISSING or EMPTY");
 
 
     if (app && authInitialized && recaptchaEnterpriseSiteKey && recaptchaEnterpriseSiteKey.trim() !== '') {
-        
+        console.log("FirebaseConfig: Conditions met to initialize App Check.");
        if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production' && debugToken) {
            (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+           console.log("FirebaseConfig: Applied FIREBASE_APPCHECK_DEBUG_TOKEN to window object for non-production environment.");
        } else if (process.env.NODE_ENV !== 'production' && !debugToken) {
            console.warn(
             "FirebaseConfig: Local Dev Hint - NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN not found. If App Check is enforced and 'localhost' isn't fully whitelisted for your reCAPTCHA key in Google Cloud, App Check may fail. Consider generating and setting a debug token."
@@ -77,18 +82,19 @@ try {
        }
 
       try {
-          // console.log("FirebaseConfig: Initializing App Check with ReCaptchaEnterpriseProvider...");
+          console.log("FirebaseConfig: Attempting to create ReCaptchaEnterpriseProvider with site key:", recaptchaEnterpriseSiteKey);
           const provider = new ReCaptchaEnterpriseProvider(recaptchaEnterpriseSiteKey);
-          // console.log("FirebaseConfig: ReCaptchaEnterpriseProvider created.");
+          console.log("FirebaseConfig: ReCaptchaEnterpriseProvider created successfully:", provider);
 
+          console.log("FirebaseConfig: Attempting to initialize App Check with the provider...");
           initializeAppCheck(app, {
             provider: provider,
             isTokenAutoRefreshEnabled: true
           });
-          // console.log("FirebaseConfig: Firebase App Check initialized successfully.");
+          console.log("FirebaseConfig: Firebase App Check initialized successfully.");
           appCheckInitialized = true;
       } catch (appCheckError: any) {
-            console.error("FirebaseConfig: Firebase App Check initialization FAILED:", appCheckError.code, appCheckError.message, appCheckError);
+            console.error("FirebaseConfig: Firebase App Check initialization FAILED. Error Code:", appCheckError.code, "Message:", appCheckError.message, "Full Error Object:", appCheckError);
             appCheckInitialized = false;
 
             if (appCheckError instanceof Error) {
@@ -108,7 +114,7 @@ try {
                         "TROUBLESHOOTING: https://firebase.google.com/docs/app-check/web/debug-recaptcha-enterprise" +
                         "\n**************************************************************************************************************************************************"
                     );
-                } else if ((appCheckError as any).code?.includes('recaptcha-error')) { // More general check for recaptcha errors
+                } else if ((appCheckError as any).code === 'appCheck/recaptcha-error') { 
                     console.error(
                         "\n**************************************************************************************************************************************************\n" +
                         "FirebaseConfig: CLIENT-SIDE RECAPTCHA ERROR (appCheck/recaptcha-error):\n" +
@@ -117,7 +123,7 @@ try {
                         "2. CORRECT SITE KEY: Is `NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY` correct?\n" +
                         "3. API ENABLED (Google Cloud): Is 'reCAPTCHA Enterprise API' enabled?\n" +
                         "4. FIREBASE APP CHECK LINK: Is App Check correctly linked to this ReCaptcha Enterprise key in Firebase Console?\n" +
-                        "5. NETWORK/ADBLOCKERS: Any network issues or browser extensions (ad blockers) blocking Google services (google.com, gstatic.com, googleapis.com)?\n" +
+                        "5. NETWORK/ADBLOCKERS: Any network issues or browser extensions (ad blockers) blocking Google services (google.com, gstatic.com, googleapis.com)? Could a specific resource like a font file being blocked due to this? If so, why?\n" +
                         "TROUBLESHOOTING: https://firebase.google.com/docs/app-check/web/debug-recaptcha-enterprise" +
                         "\n**************************************************************************************************************************************************"
                     );
@@ -137,7 +143,7 @@ try {
     } else if (!app) {
         console.error("FirebaseConfig: Firebase App Check initialization SKIPPED: Firebase app instance is not available.");
         appCheckInitialized = false;
-    } else if (!authInitialized) { // Check authInitialized directly
+    } else if (!authInitialized) { 
         console.warn("FirebaseConfig: Firebase App Check initialization SKIPPED: Firebase Auth instance did not initialize successfully. App Check relies on Auth being ready.");
         appCheckInitialized = false;
     } else if (!recaptchaEnterpriseSiteKey || recaptchaEnterpriseSiteKey.trim() === '') {
@@ -147,6 +153,8 @@ try {
          "App Check protects backend resources. It's STRONGLY RECOMMENDED to configure it."
        );
        appCheckInitialized = false;
+    } else {
+        console.log("FirebaseConfig: App Check initialization skipped due to other unmet conditions. app:", !!app, "authInitialized:", authInitialized, "recaptchaEnterpriseSiteKey:", !!recaptchaEnterpriseSiteKey);
     }
   }
 } catch (e: any) {
@@ -156,10 +164,12 @@ try {
     appCheckInitialized = false;
 }
 
+console.log("FirebaseConfig: Final states after initialization block - appInitialized:", appInitialized, "authInitialized:", authInitialized, "appCheckInitialized:", appCheckInitialized);
+
 if (appInitialized && authInitialized && !appCheckInitialized && process.env.NEXT_PUBLIC_FIREBASE_RECAPTCHA_ENTERPRISE_SITE_KEY) {
     console.error(
         "\n**************************************************************************************************************************************************\n" +
-        "FirebaseConfig: CRITICAL CONFIGURATION ISSUE DETECTED:\n" +
+        "FirebaseConfig: CRITICAL CONFIGURATION ISSUE DETECTED (POST-INITIALIZATION CHECK):\n" +
         "Firebase Core and Auth initialized, AND a ReCAPTCHA site key IS PROVIDED, BUT App Check FAILED to initialize OR is misconfigured.\n" +
         "This will likely lead to request failures (HTTP 403 Forbidden) for backend services (Authentication, Firestore, GenAI Flows, etc.) if App Check is enforced.\n\n" +
         "==> THIS IS ALMOST CERTAINLY A CONFIGURATION PROBLEM IN YOUR FIREBASE/GOOGLE CLOUD CONSOLE. <==\n" +
